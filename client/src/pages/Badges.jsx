@@ -256,24 +256,24 @@ export default function Badges() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
             onClick={() => setSelectedBadge(null)}
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-dark-300 rounded-2xl p-6 max-w-sm w-full border border-white/10 text-center"
+              className="bg-dark-300 rounded-2xl p-4 sm:p-6 max-w-sm w-full border border-white/10 text-center max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Badge Icon */}
               <div className={`
-                w-24 h-24 mx-auto rounded-2xl flex items-center justify-center mb-4
+                w-20 h-20 sm:w-24 sm:h-24 mx-auto rounded-2xl flex items-center justify-center mb-4
                 ${selectedBadge.earned 
                   ? 'bg-gradient-to-br from-yellow-500/20 to-orange-500/20' 
                   : 'bg-dark-200'}
               `}>
-                <span className="text-6xl">{selectedBadge.icon}</span>
+                <span className="text-5xl sm:text-6xl">{selectedBadge.icon}</span>
               </div>
               
               {/* Rarity */}

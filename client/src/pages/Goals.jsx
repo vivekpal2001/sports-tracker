@@ -315,19 +315,19 @@ export default function Goals() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
             onClick={() => setShowCreateModal(false)}
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-dark-300 rounded-2xl w-full max-w-lg border border-white/10 overflow-hidden"
+              className="bg-dark-300 rounded-2xl w-full max-w-lg border border-white/10 max-h-[90vh] overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <h2 className="text-xl font-bold text-white">Create New Goal</h2>
+              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 flex-shrink-0">
+                <h2 className="text-lg sm:text-xl font-bold text-white">Create New Goal</h2>
                 <button
                   onClick={() => setShowCreateModal(false)}
                   className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
@@ -337,24 +337,24 @@ export default function Goals() {
               </div>
               
               {/* Form */}
-              <form onSubmit={handleCreateGoal} className="p-6 space-y-4">
+              <form onSubmit={handleCreateGoal} className="p-4 sm:p-6 space-y-4 overflow-y-auto flex-1">
                 {/* Goal Type */}
                 <div>
                   <label className="block text-sm text-gray-400 mb-2">Goal Type</label>
-                  <div className="grid grid-cols-2 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto pr-1">
                     {GOAL_TYPES.map((goalType) => (
                       <button
                         key={goalType.type}
                         type="button"
                         onClick={() => handleTypeChange(goalType.type)}
                         className={`
-                          p-3 rounded-xl text-left transition-all border-2
+                          p-3 rounded-xl text-left transition-all border-2 flex items-center gap-3 sm:block
                           ${newGoal.type === goalType.type 
                             ? 'border-primary-500 bg-primary-500/10' 
                             : 'border-transparent bg-dark-200/50 hover:bg-dark-200'}
                         `}
                       >
-                        <span className="text-2xl mb-1 block">{goalType.icon}</span>
+                        <span className="text-xl sm:text-2xl sm:mb-1 sm:block">{goalType.icon}</span>
                         <span className="text-sm text-white font-medium">{goalType.name}</span>
                       </button>
                     ))}

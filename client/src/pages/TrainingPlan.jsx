@@ -372,19 +372,19 @@ export default function TrainingPlan() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
             onClick={() => setShowCreateModal(false)}
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-dark-300 rounded-2xl w-full max-w-lg border border-white/10 overflow-hidden"
+              className="bg-dark-300 rounded-2xl w-full max-w-lg border border-white/10 max-h-[90vh] overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
-                <h2 className="text-xl font-bold text-white">Create Training Plan</h2>
+              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 flex-shrink-0">
+                <h2 className="text-lg sm:text-xl font-bold text-white">Create Training Plan</h2>
                 <button
                   onClick={() => setShowCreateModal(false)}
                   className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
@@ -394,26 +394,26 @@ export default function TrainingPlan() {
               </div>
               
               {/* Wizard Steps */}
-              <div className="p-6">
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1">
                 {/* Step 1: Choose Plan Type */}
                 {wizardStep === 1 && (
                   <div className="space-y-4">
                     <p className="text-gray-400 mb-4">Choose your training goal:</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3 max-h-[300px] overflow-y-auto pr-1">
                       {PLAN_TYPES.map((plan) => (
                         <button
                           key={plan.type}
                           onClick={() => setNewPlan(prev => ({ ...prev, type: plan.type }))}
                           className={`
-                            p-4 rounded-xl text-left transition-all border-2
+                            p-3 sm:p-4 rounded-xl text-left transition-all border-2
                             ${newPlan.type === plan.type 
                               ? 'border-primary-500 bg-primary-500/10' 
                               : 'border-transparent bg-dark-200/50 hover:bg-dark-200'}
                           `}
                         >
-                          <span className="text-2xl mb-2 block">{plan.icon}</span>
-                          <span className="text-white font-medium block">{plan.name}</span>
-                          <span className="text-xs text-gray-400">{plan.weeks} weeks</span>
+                          <span className="text-xl sm:text-2xl mb-1 sm:mb-2 block">{plan.icon}</span>
+                          <span className="text-white font-medium block text-sm">{plan.name}</span>
+                          <span className="text-xs text-gray-400 hidden sm:block">{plan.weeks} weeks</span>
                         </button>
                       ))}
                     </div>

@@ -106,25 +106,25 @@ export default function DataImportHelp() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
             onClick={() => setIsOpen(false)}
           >
             <motion.div
               initial={{ scale: 0.9, y: 20 }}
               animate={{ scale: 1, y: 0 }}
               exit={{ scale: 0.9, y: 20 }}
-              className="bg-dark-300 rounded-2xl w-full max-w-lg border border-white/10 max-h-[80vh] overflow-hidden flex flex-col"
+              className="bg-dark-300 rounded-2xl w-full max-w-lg border border-white/10 max-h-[90vh] overflow-hidden flex flex-col"
               onClick={(e) => e.stopPropagation()}
             >
               {/* Header */}
-              <div className="flex items-center justify-between p-6 border-b border-white/10">
+              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 flex-shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-primary-500/20 flex items-center justify-center">
                     <Download className="w-5 h-5 text-primary-500" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold text-white">Import Workouts</h2>
-                    <p className="text-sm text-gray-400">Export from your favorite fitness apps</p>
+                    <h2 className="text-lg sm:text-xl font-bold text-white">Import Workouts</h2>
+                    <p className="text-xs sm:text-sm text-gray-400">Export from your favorite apps</p>
                   </div>
                 </div>
                 <button
