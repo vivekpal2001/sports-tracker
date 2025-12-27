@@ -9,7 +9,8 @@ import {
   updateWorkout,
   deleteWorkout,
   uploadWorkoutFile,
-  getWorkoutStats
+  getWorkoutStats,
+  getChartData
 } from '../controllers/workoutController.js';
 
 const router = express.Router();
@@ -47,6 +48,9 @@ router.use(protect);
 
 // Stats route (must be before :id route)
 router.get('/stats', getWorkoutStats);
+
+// Chart data for dashboard and analytics
+router.get('/chart-data', getChartData);
 
 // File upload route
 router.post('/upload', upload.single('file'), uploadWorkoutFile);

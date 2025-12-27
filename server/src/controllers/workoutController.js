@@ -157,7 +157,10 @@ export const deleteWorkout = async (req, res, next) => {
 // @access  Private
 export const uploadWorkoutFile = async (req, res, next) => {
   try {
+    console.log('📤 Upload request received');
+    
     if (!req.file) {
+      console.log('❌ No file in request');
       return res.status(400).json({
         success: false,
         message: 'No file uploaded'
@@ -166,6 +169,8 @@ export const uploadWorkoutFile = async (req, res, next) => {
     
     const { originalname, filename, path: filepath } = req.file;
     const ext = originalname.split('.').pop().toLowerCase();
+    
+    console.log('📄 Processing file:', originalname, 'at', filepath);
     
     let parsedData;
     
@@ -179,6 +184,8 @@ export const uploadWorkoutFile = async (req, res, next) => {
         message: 'Invalid file type. Only GPX and CSV files are supported'
       });
     }
+    
+    console.log('📊 Parsed data:', JSON.stringify(parsedData, null, 2));
     
     // Create workouts from parsed data (now supports multiple)
     const workoutsToCreate = parsedData.workouts.map((w, idx) => ({
@@ -201,7 +208,11 @@ export const uploadWorkoutFile = async (req, res, next) => {
       }
     }));
     
+    console.log('💾 Creating', workoutsToCreate.length, 'workouts');
+    
     const createdWorkouts = await Workout.insertMany(workoutsToCreate);
+    
+    console.log('✅ Created', createdWorkouts.length, 'workouts successfully');
     
     res.status(201).json({
       success: true,
@@ -210,6 +221,7 @@ export const uploadWorkoutFile = async (req, res, next) => {
       count: createdWorkouts.length
     });
   } catch (error) {
+    console.error('❌ Upload error:', error);
     next(error);
   }
 };
@@ -336,6 +348,123 @@ export const getWorkoutStats = async (req, res, next) => {
         totalDistance,  // Combined distance for all activities
         streak,
         period
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get chart data for dashboard and analytics
+// @route   GET /api/workouts/chart-data
+// @access  Private
+export const getChartData = async (req, res, next) => {
+  try {
+    const { period = 'week', year, month } = req.query;
+    
+    const now = new Date();
+    let startDate, endDate;
+    
+    // Determine date range based on period
+    if (period === 'week') {
+      startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - 7);
+      endDate = now;
+    } else if (period === 'month') {
+      startDate = new Date(now);
+      startDate.setDate(startDate.getDate() - 30);
+      endDate = now;
+    } else if (period === 'year') {
+      startDate = new Date(now);
+      startDate.setFullYear(startDate.getFullYear() - 1);
+      endDate = now;
+    } else if (period === 'all') {
+      startDate = new Date('2000-01-01');
+      endDate = now;
+    } else if (period === 'custom' && year && month) {
+      // For heatmap calendar view
+      startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
+      endDate = new Date(parseInt(year), parseInt(month), 0); // Last day of month
+    }
+    
+    // Get daily aggregated data
+    const dailyData = await Workout.aggregate([
+      {
+        $match: {
+          user: req.user._id,
+          date: { $gte: startDate, $lte: endDate },
+          type: { $ne: 'biometrics' }
+        }
+      },
+      {
+        $group: {
+          _id: {
+            year: { $year: '$date' },
+            month: { $month: '$date' },
+            day: { $dayOfMonth: '$date' }
+          },
+          totalDuration: { $sum: '$duration' },
+          workoutCount: { $sum: 1 },
+          totalDistance: { 
+            $sum: { 
+              $cond: [
+                { $eq: ['$type', 'run'] },
+                '$run.distance',
+                { $cond: [{ $eq: ['$type', 'cardio'] }, '$cardio.distance', 0] }
+              ]
+            }
+          },
+          avgRpe: { $avg: '$rpe' },
+          types: { $push: '$type' }
+        }
+      },
+      { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } }
+    ]);
+    
+    // Format for frontend charts
+    const chartData = dailyData.map(d => ({
+      date: new Date(d._id.year, d._id.month - 1, d._id.day).toISOString().split('T')[0],
+      duration: d.totalDuration || 0,
+      workouts: d.workoutCount,
+      distance: d.totalDistance || 0,
+      rpe: d.avgRpe || 0,
+      types: d.types
+    }));
+    
+    // Get type distribution
+    const typeDistribution = await Workout.aggregate([
+      {
+        $match: {
+          user: req.user._id,
+          date: { $gte: startDate, $lte: endDate }
+        }
+      },
+      {
+        $group: {
+          _id: '$type',
+          count: { $sum: 1 },
+          totalDuration: { $sum: '$duration' }
+        }
+      }
+    ]);
+    
+    // Heatmap data - get all days with activity for the given range
+    const heatmapData = chartData.map(d => ({
+      date: d.date,
+      intensity: Math.min(4, d.workouts), // 0-4 scale for heatmap
+      duration: d.duration,
+      workouts: d.workouts
+    }));
+    
+    res.json({
+      success: true,
+      data: {
+        daily: chartData,
+        typeDistribution,
+        heatmap: heatmapData,
+        period,
+        startDate,
+        endDate
       }
     });
   } catch (error) {

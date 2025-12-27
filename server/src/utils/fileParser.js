@@ -96,12 +96,15 @@ export const parseCSV = async (filepath) => {
     const content = await fs.readFile(filepath, 'utf-8');
     const lines = content.trim().split('\n');
     
+    console.log('📄 CSV Parsing - Lines found:', lines.length);
+    
     if (lines.length < 2) {
       throw new Error('CSV file is empty or has no data rows');
     }
     
     // Parse headers - normalize them
     const headers = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/['"]/g, ''));
+    console.log('📄 CSV Headers:', headers);
     
     // Map common header variations
     const headerMap = {
@@ -111,7 +114,7 @@ export const parseCSV = async (filepath) => {
       'distance': ['distance', 'km', 'kilometers', 'miles', 'dist'],
       'pace': ['pace', 'avg_pace', 'average_pace', 'min_per_km'],
       'elevation': ['elevation', 'elev', 'elevation_gain', 'ascent', 'gain'],
-      'heart_rate': ['heart_rate', 'hr', 'avg_hr', 'avg_heart_rate', 'average_heart_rate', 'avg_heartrate'],
+      'heart_rate': ['heart_rate', 'hr', 'avg_hr', 'avg_heart_rate', 'average_heart_rate', 'avg_heartrate', 'heartrate'],
       'calories': ['calories', 'cal', 'kcal', 'energy']
     };
     

@@ -34,10 +34,16 @@ export default function Dashboard() {
   const [workouts, setWorkouts] = useState([]);
   const [aiInsights, setAiInsights] = useState(null);
   const [exporting, setExporting] = useState(false);
+  const [chartData, setChartData] = useState([]);
+  const [chartPeriod, setChartPeriod] = useState('week');
   
   useEffect(() => {
     fetchData();
   }, []);
+  
+  useEffect(() => {
+    fetchChartData(chartPeriod);
+  }, [chartPeriod]);
   
   const fetchData = async () => {
     try {
@@ -54,6 +60,52 @@ export default function Dashboard() {
       console.error('Failed to fetch dashboard data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const fetchChartData = async (period) => {
+    try {
+      const res = await workoutAPI.getChartData({ period });
+      const daily = res.data.data.daily || [];
+      
+      // Convert to chart format with x,y for Victory
+      // Group by day of week for weekly view
+      if (period === 'week') {
+        const weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const dayMap = {};
+        
+        daily.forEach(d => {
+          const dayOfWeek = new Date(d.date).getDay();
+          if (!dayMap[dayOfWeek]) {
+            dayMap[dayOfWeek] = { duration: 0, workouts: 0 };
+          }
+          dayMap[dayOfWeek].duration += d.duration;
+          dayMap[dayOfWeek].workouts += d.workouts;
+        });
+        
+        // Create data for all 7 days
+        const chartPoints = [];
+        for (let i = 1; i <= 7; i++) {
+          const dayIdx = i === 7 ? 0 : i; // Sunday is 0
+          chartPoints.push({
+            x: i,
+            y: dayMap[dayIdx]?.duration || 0,
+            label: weekDays[dayIdx]
+          });
+        }
+        setChartData(chartPoints);
+      } else {
+        // For month/year, show daily values
+        const chartPoints = daily.map((d, i) => ({
+          x: i + 1,
+          y: d.duration || 0,
+          label: d.date
+        }));
+        setChartData(chartPoints.length > 0 ? chartPoints : [{ x: 1, y: 0 }]);
+      }
+    } catch (error) {
+      console.error('Failed to fetch chart data:', error);
+      setChartData([{ x: 1, y: 0 }]);
     }
   };
   
@@ -84,7 +136,6 @@ export default function Dashboard() {
   }
   
   const performanceScore = aiInsights?.performanceScore || 75;
-  const chartData = generateChartData();
   
   return (
     <div className="space-y-6">
@@ -192,11 +243,17 @@ export default function Dashboard() {
         {/* Performance Chart */}
         <Card className="lg:col-span-2">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-lg font-semibold text-white">Weekly Activity</h3>
-            <select className="bg-dark-200 border border-white/10 rounded-lg px-3 py-1 text-sm text-gray-300">
-              <option>This Week</option>
-              <option>Last Week</option>
-              <option>This Month</option>
+            <h3 className="text-lg font-semibold text-white">
+              {chartPeriod === 'week' ? 'Weekly' : chartPeriod === 'month' ? 'Monthly' : 'Yearly'} Activity
+            </h3>
+            <select 
+              className="bg-dark-200 border border-white/10 rounded-lg px-3 py-1 text-sm text-gray-300"
+              value={chartPeriod}
+              onChange={(e) => setChartPeriod(e.target.value)}
+            >
+              <option value="week">This Week</option>
+              <option value="month">This Month</option>
+              <option value="year">This Year</option>
             </select>
           </div>
           <div className="h-64">
@@ -371,21 +428,7 @@ export default function Dashboard() {
               </Link>
             </Card>
           )}
-        </div>
       </div>
     </div>
   );
-}
-
-// Helper function to generate chart data
-function generateChartData() {
-  return [
-    { x: 1, y: 45 },
-    { x: 2, y: 60 },
-    { x: 3, y: 30 },
-    { x: 4, y: 75 },
-    { x: 5, y: 55 },
-    { x: 6, y: 90 },
-    { x: 7, y: 40 },
-  ];
 }
