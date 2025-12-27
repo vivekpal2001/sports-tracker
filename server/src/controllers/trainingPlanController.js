@@ -1,6 +1,5 @@
 import TrainingPlan from '../models/TrainingPlan.js';
 import Workout from '../models/Workout.js';
-import { analyzeWorkouts } from '../services/aiService.js';
 
 // Plan templates for different goals
 const PLAN_TEMPLATES = {
