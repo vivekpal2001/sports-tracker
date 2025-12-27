@@ -189,6 +189,14 @@ export default function Workouts() {
                           )}
                         </div>
                       )}
+                      {workout.type === 'cardio' && workout.cardio?.distance && (
+                        <div className="text-right">
+                          <div className="text-lg font-bold text-white">
+                            {workout.cardio.distance.toFixed(1)} km
+                          </div>
+                          <div className="text-xs text-gray-400">{workout.cardio.activity}</div>
+                        </div>
+                      )}
                       {workout.rpe && (
                         <div className="text-right">
                           <div className="text-lg font-bold text-white">

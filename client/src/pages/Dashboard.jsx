@@ -139,14 +139,14 @@ export default function Dashboard() {
           {[
             { 
               label: 'Workouts', 
-              value: stats?.byType?.reduce((sum, t) => sum + (t.type !== 'biometrics' ? t.count : 0), 0) || 0,
+              value: stats?.byType?.reduce((sum, t) => sum + ((t._id !== 'biometrics' && t.type !== 'biometrics') ? t.count : 0), 0) || 0,
               icon: Activity,
               color: 'primary',
               suffix: ''
             },
             { 
               label: 'Distance', 
-              value: stats?.running?.totalDistance || 0,
+              value: stats?.totalDistance || 0,  // Now includes both running and cardio
               icon: TrendingUp,
               color: 'lime',
               suffix: ' km',
@@ -344,6 +344,9 @@ export default function Dashboard() {
                   <div className="text-right">
                     {workout.type === 'run' && workout.run?.distance && (
                       <span className="text-lg font-bold text-white">{workout.run.distance.toFixed(1)} km</span>
+                    )}
+                    {workout.type === 'cardio' && workout.cardio?.distance && (
+                      <span className="text-lg font-bold text-white">{workout.cardio.distance.toFixed(1)} km</span>
                     )}
                     {workout.rpe && (
                       <p className="text-sm text-gray-400">RPE: {workout.rpe}</p>

@@ -244,6 +244,16 @@ export const getWorkoutStats = async (req, res, next) => {
           avgDuration: { $avg: '$duration' },
           avgRpe: { $avg: '$rpe' }
         }
+      },
+      {
+        $project: {
+          _id: 1,
+          type: '$_id',  // Add type field for frontend compatibility
+          count: 1,
+          totalDuration: 1,
+          avgDuration: 1,
+          avgRpe: 1
+        }
       }
     ]);
     
@@ -262,6 +272,24 @@ export const getWorkoutStats = async (req, res, next) => {
           totalDistance: { $sum: '$run.distance' },
           avgPace: { $avg: '$run.pace' },
           totalElevation: { $sum: '$run.elevation' }
+        }
+      }
+    ]);
+    
+    // Get total distance for cardio (cycling, swimming, etc.)
+    const cardioStats = await Workout.aggregate([
+      {
+        $match: {
+          user: req.user._id,
+          type: 'cardio',
+          date: { $gte: startDate }
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalDistance: { $sum: '$cardio.distance' },
+          totalCalories: { $sum: '$cardio.calories' }
         }
       }
     ]);
@@ -293,11 +321,18 @@ export const getWorkoutStats = async (req, res, next) => {
       }
     }
     
+    // Calculate total distance (running + cardio)
+    const runDistance = runStats[0]?.totalDistance || 0;
+    const cardioDistance = cardioStats[0]?.totalDistance || 0;
+    const totalDistance = runDistance + cardioDistance;
+    
     res.json({
       success: true,
       data: {
         byType: stats,
         running: runStats[0] || {},
+        cardio: cardioStats[0] || {},
+        totalDistance,  // Combined distance for all activities
         streak,
         period
       }
