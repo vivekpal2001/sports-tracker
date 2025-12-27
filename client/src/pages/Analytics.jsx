@@ -23,6 +23,7 @@ import {
 } from 'victory';
 import { Card, AnimatedCounter, LoadingSpinner } from '../components/ui';
 import { workoutAPI, aiAPI } from '../services/api';
+import CalendarHeatmap from '../components/CalendarHeatmap';
 
 export default function Analytics() {
   const [loading, setLoading] = useState(true);
@@ -272,64 +273,8 @@ export default function Analytics() {
         </div>
       </Card>
       
-      {/* Training Heatmap */}
-      <Card>
-        <h3 className="text-lg font-semibold text-white mb-6">Training Heatmap</h3>
-        <div className="overflow-x-auto">
-          <div className="min-w-[600px]">
-            <div className="flex mb-2">
-              <div className="w-16" />
-              {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day) => (
-                <div key={day} className="flex-1 text-center text-sm text-gray-400">
-                  {day}
-                </div>
-              ))}
-            </div>
-            {generateHeatmapData().map((week, weekIdx) => (
-              <div key={weekIdx} className="flex mb-1">
-                <div className="w-16 text-sm text-gray-500 flex items-center">
-                  Week {weekIdx + 1}
-                </div>
-                {week.map((day, dayIdx) => (
-                  <motion.div
-                    key={dayIdx}
-                    initial={{ scale: 0 }}
-                    animate={{ scale: 1 }}
-                    transition={{ delay: (weekIdx * 7 + dayIdx) * 0.02 }}
-                    className={`
-                      flex-1 aspect-square mx-0.5 rounded-md cursor-pointer
-                      transition-all hover:ring-2 hover:ring-white/30
-                      ${day === 0 ? 'bg-dark-300' : ''}
-                      ${day === 1 ? 'bg-primary-500/30' : ''}
-                      ${day === 2 ? 'bg-primary-500/50' : ''}
-                      ${day === 3 ? 'bg-primary-500/70' : ''}
-                      ${day >= 4 ? 'bg-primary-500' : ''}
-                    `}
-                    title={`${day} workout${day !== 1 ? 's' : ''}`}
-                  />
-                ))}
-              </div>
-            ))}
-            <div className="flex items-center justify-end gap-2 mt-4">
-              <span className="text-xs text-gray-500">Less</span>
-              {[0, 1, 2, 3, 4].map((level) => (
-                <div
-                  key={level}
-                  className={`
-                    w-4 h-4 rounded-sm
-                    ${level === 0 ? 'bg-dark-300' : ''}
-                    ${level === 1 ? 'bg-primary-500/30' : ''}
-                    ${level === 2 ? 'bg-primary-500/50' : ''}
-                    ${level === 3 ? 'bg-primary-500/70' : ''}
-                    ${level >= 4 ? 'bg-primary-500' : ''}
-                  `}
-                />
-              ))}
-              <span className="text-xs text-gray-500">More</span>
-            </div>
-          </div>
-        </div>
-      </Card>
+      {/* Training Calendar Heatmap */}
+      <CalendarHeatmap />
     </div>
   );
 }
@@ -382,10 +327,4 @@ function generateWeeklyTrend() {
       { x: 4, y: 78 }
     ]
   };
-}
-
-function generateHeatmapData() {
-  return Array(4).fill(null).map(() =>
-    Array(7).fill(null).map(() => Math.floor(Math.random() * 5))
-  );
 }
