@@ -2,6 +2,7 @@ import Workout from '../models/Workout.js';
 import { parseGPX, parseCSV } from '../utils/fileParser.js';
 import { checkAndUpdatePRs } from './prController.js';
 import { updateGoalProgress } from './goalController.js';
+import { checkAndAwardBadges } from '../services/badgeService.js';
 
 // @desc    Get all workouts for user
 // @route   GET /api/workouts
@@ -91,11 +92,15 @@ export const createWorkout = async (req, res, next) => {
     // Update goal progress
     const updatedGoals = await updateGoalProgress(req.user._id, workout);
     
+    // Check and award badges
+    const newBadges = await checkAndAwardBadges(req.user._id, workout);
+    
     res.status(201).json({
       success: true,
       data: workout,
       newPRs: newPRs.length > 0 ? newPRs : undefined,
-      updatedGoals: updatedGoals.length > 0 ? updatedGoals : undefined
+      updatedGoals: updatedGoals.length > 0 ? updatedGoals : undefined,
+      newBadges: newBadges.length > 0 ? newBadges : undefined
     });
   } catch (error) {
     next(error);

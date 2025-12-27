@@ -76,3 +76,8 @@ export const goalAPI = {
   update: (id, data) => api.put(`/goals/${id}`, data),
   delete: (id) => api.delete(`/goals/${id}`)
 };
+
+export const badgeAPI = {
+  getAll: () => api.get('/badges'),
+  getDefinitions: () => api.get('/badges/definitions')
+};
