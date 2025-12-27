@@ -1,6 +1,6 @@
 import express from 'express';
 import { protect } from '../middleware/auth.js';
-import { getBadges, getBadgeDefinitions } from '../controllers/badgeController.js';
+import { getBadges, getBadgeDefinitions, syncBadges } from '../controllers/badgeController.js';
 
 const router = express.Router();
 
@@ -12,5 +12,8 @@ router.get('/', getBadges);
 
 // Get badge definitions
 router.get('/definitions', getBadgeDefinitions);
+
+// Sync/retroactively award badges
+router.post('/sync', syncBadges);
 
 export default router;

@@ -79,5 +79,6 @@ export const goalAPI = {
 
 export const badgeAPI = {
   getAll: () => api.get('/badges'),
-  getDefinitions: () => api.get('/badges/definitions')
+  getDefinitions: () => api.get('/badges/definitions'),
+  sync: () => api.post('/badges/sync')
 };

@@ -5,7 +5,8 @@ import {
   Lock,
   CheckCircle,
   Calendar,
-  Star
+  Star,
+  RefreshCw
 } from 'lucide-react';
 import { Card, LoadingSpinner } from '../components/ui';
 import { badgeAPI } from '../services/api';
@@ -31,6 +32,7 @@ export default function Badges() {
   const [badgeData, setBadgeData] = useState(null);
   const [selectedBadge, setSelectedBadge] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [syncing, setSyncing] = useState(false);
   
   useEffect(() => {
     fetchBadges();
@@ -44,6 +46,25 @@ export default function Badges() {
       console.error('Failed to fetch badges:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const response = await badgeAPI.sync();
+      const newBadges = response.data.newBadges || [];
+      if (newBadges.length > 0) {
+        alert(`🎉 ${newBadges.length} new badge(s) awarded: ${newBadges.map(b => b.name).join(', ')}`);
+      } else {
+        alert('All badges are up to date!');
+      }
+      fetchBadges(); // Refresh
+    } catch (error) {
+      console.error('Failed to sync badges:', error);
+      alert('Failed to sync badges');
+    } finally {
+      setSyncing(false);
     }
   };
   
@@ -91,7 +112,7 @@ export default function Badges() {
           </p>
         </div>
         
-        {/* Progress */}
+        {/* Progress + Sync */}
         <div className="flex items-center gap-4">
           <div className="flex-1 md:w-48 h-2 bg-dark-300 rounded-full overflow-hidden">
             <motion.div
@@ -101,6 +122,14 @@ export default function Badges() {
             />
           </div>
           <span className="text-white font-medium">{Math.round((earned / total) * 100)}%</span>
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="p-2 rounded-xl bg-dark-200/50 hover:bg-dark-200 text-gray-400 hover:text-white transition-colors disabled:opacity-50"
+            title="Sync badges for existing workouts"
+          >
+            <RefreshCw className={`w-5 h-5 ${syncing ? 'animate-spin' : ''}`} />
+          </button>
         </div>
       </div>
       

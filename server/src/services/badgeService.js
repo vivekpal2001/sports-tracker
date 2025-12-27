@@ -1,7 +1,14 @@
+import mongoose from 'mongoose';
 import UserBadge from '../models/UserBadge.js';
 import Workout from '../models/Workout.js';
 import PersonalRecord from '../models/PersonalRecord.js';
 import Goal from '../models/Goal.js';
+
+// Helper to ensure ObjectId type
+const toObjectId = (id) => {
+  if (typeof id === 'string') return new mongoose.Types.ObjectId(id);
+  return id;
+};
 
 // Badge definitions
 export const BADGES = {
@@ -346,7 +353,7 @@ async function calculateTotalDistance(userId) {
   const result = await Workout.aggregate([
     {
       $match: {
-        user: userId,
+        user: toObjectId(userId),
         type: { $in: ['run', 'cardio'] }
       }
     },
@@ -357,8 +364,8 @@ async function calculateTotalDistance(userId) {
           $sum: {
             $cond: [
               { $eq: ['$type', 'run'] },
-              '$run.distance',
-              '$cardio.distance'
+              { $ifNull: ['$run.distance', 0] },
+              { $ifNull: ['$cardio.distance', 0] }
             ]
           }
         }
@@ -366,6 +373,7 @@ async function calculateTotalDistance(userId) {
     }
   ]);
   
+  console.log('Total distance calculated:', result[0]?.totalDistance || 0, 'km');
   return result[0]?.totalDistance || 0;
 }
 
@@ -453,3 +461,131 @@ export const getUserBadges = async (userId) => {
     total: Object.keys(BADGES).length
   };
 };
+
+// Sync/retroactively award badges for existing data
+export const syncUserBadges = async (userId) => {
+  const newBadges = [];
+  
+  try {
+    // Get user's existing badges
+    const existingBadges = await UserBadge.find({ user: userId }).select('badgeId');
+    const earnedBadgeIds = new Set(existingBadges.map(b => b.badgeId));
+    
+    // Count total workouts
+    const workoutCount = await Workout.countDocuments({ 
+      user: userId, 
+      type: { $ne: 'biometrics' } 
+    });
+    console.log(`Sync badges for user: ${workoutCount} workouts found`);
+    
+    // First workout badge
+    if (workoutCount >= 1 && !earnedBadgeIds.has('first_workout')) {
+      const badge = await awardBadgeSimple(userId, 'first_workout');
+      if (badge) newBadges.push(badge);
+    }
+    
+    // Workout count badges
+    if (workoutCount >= 10 && !earnedBadgeIds.has('workouts_10')) {
+      const badge = await awardBadgeSimple(userId, 'workouts_10');
+      if (badge) newBadges.push(badge);
+    }
+    if (workoutCount >= 50 && !earnedBadgeIds.has('workouts_50')) {
+      const badge = await awardBadgeSimple(userId, 'workouts_50');
+      if (badge) newBadges.push(badge);
+    }
+    if (workoutCount >= 100 && !earnedBadgeIds.has('workouts_100')) {
+      const badge = await awardBadgeSimple(userId, 'workouts_100');
+      if (badge) newBadges.push(badge);
+    }
+    if (workoutCount >= 500 && !earnedBadgeIds.has('workouts_500')) {
+      const badge = await awardBadgeSimple(userId, 'workouts_500');
+      if (badge) newBadges.push(badge);
+    }
+    
+    // Distance badges
+    const totalDistance = await calculateTotalDistance(userId);
+    console.log(`Total distance for badge sync: ${totalDistance} km`);
+    
+    if (totalDistance >= 50 && !earnedBadgeIds.has('distance_50')) {
+      const badge = await awardBadgeSimple(userId, 'distance_50');
+      if (badge) newBadges.push(badge);
+    }
+    if (totalDistance >= 100 && !earnedBadgeIds.has('distance_100')) {
+      const badge = await awardBadgeSimple(userId, 'distance_100');
+      if (badge) newBadges.push(badge);
+    }
+    if (totalDistance >= 500 && !earnedBadgeIds.has('distance_500')) {
+      const badge = await awardBadgeSimple(userId, 'distance_500');
+      if (badge) newBadges.push(badge);
+    }
+    if (totalDistance >= 1000 && !earnedBadgeIds.has('distance_1000')) {
+      const badge = await awardBadgeSimple(userId, 'distance_1000');
+      if (badge) newBadges.push(badge);
+    }
+    
+    // PR badges
+    const prCount = await PersonalRecord.countDocuments({ user: userId });
+    
+    if (prCount >= 1 && !earnedBadgeIds.has('first_pr')) {
+      const badge = await awardBadgeSimple(userId, 'first_pr');
+      if (badge) newBadges.push(badge);
+    }
+    if (prCount >= 5 && !earnedBadgeIds.has('pr_5')) {
+      const badge = await awardBadgeSimple(userId, 'pr_5');
+      if (badge) newBadges.push(badge);
+    }
+    if (prCount >= 10 && !earnedBadgeIds.has('pr_10')) {
+      const badge = await awardBadgeSimple(userId, 'pr_10');
+      if (badge) newBadges.push(badge);
+    }
+    
+    // Goal badges
+    const completedGoals = await Goal.countDocuments({ 
+      user: userId, 
+      status: 'completed' 
+    });
+    
+    if (completedGoals >= 1 && !earnedBadgeIds.has('first_goal')) {
+      const badge = await awardBadgeSimple(userId, 'first_goal');
+      if (badge) newBadges.push(badge);
+    }
+    if (completedGoals >= 5 && !earnedBadgeIds.has('goals_5')) {
+      const badge = await awardBadgeSimple(userId, 'goals_5');
+      if (badge) newBadges.push(badge);
+    }
+    if (completedGoals >= 10 && !earnedBadgeIds.has('goals_10')) {
+      const badge = await awardBadgeSimple(userId, 'goals_10');
+      if (badge) newBadges.push(badge);
+    }
+    
+    console.log(`Badge sync complete: ${newBadges.length} new badges awarded`);
+    return newBadges;
+  } catch (error) {
+    console.error('Error syncing badges:', error);
+    return [];
+  }
+};
+
+// Simple badge award without workout reference
+async function awardBadgeSimple(userId, badgeId) {
+  try {
+    const badge = BADGES[badgeId];
+    if (!badge) return null;
+    
+    const userBadge = await UserBadge.create({
+      user: userId,
+      badgeId
+    });
+    
+    console.log(`🏅 Badge awarded (sync): ${badge.name}`);
+    
+    return {
+      ...badge,
+      earnedAt: userBadge.earnedAt
+    };
+  } catch (error) {
+    if (error.code === 11000) return null;
+    console.error('Error awarding badge:', error);
+    return null;
+  }
+}

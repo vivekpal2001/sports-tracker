@@ -1,4 +1,4 @@
-import { getUserBadges, BADGES } from '../services/badgeService.js';
+import { getUserBadges, BADGES, syncUserBadges } from '../services/badgeService.js';
 
 // @desc    Get all badges (earned + locked)
 // @route   GET /api/badges
@@ -24,6 +24,23 @@ export const getBadgeDefinitions = async (req, res, next) => {
     res.json({
       success: true,
       data: BADGES
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Sync/retroactively award badges
+// @route   POST /api/badges/sync
+// @access  Private
+export const syncBadges = async (req, res, next) => {
+  try {
+    const newBadges = await syncUserBadges(req.user._id);
+    
+    res.json({
+      success: true,
+      message: `Synced badges. ${newBadges.length} new badges awarded.`,
+      newBadges
     });
   } catch (error) {
     next(error);
