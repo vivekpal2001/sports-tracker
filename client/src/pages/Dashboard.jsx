@@ -428,6 +428,7 @@ export default function Dashboard() {
               </Link>
             </Card>
           )}
+        </div>
       </div>
     </div>
   );
