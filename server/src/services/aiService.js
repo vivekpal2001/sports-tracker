@@ -13,7 +13,7 @@ export const analyzePerformance = async (userId, workouts) => {
   }
   
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
     
     // Prepare workout summary for AI
     const workoutSummary = prepareWorkoutSummary(workouts);
@@ -96,7 +96,7 @@ export const generateChatResponse = async (userId, message, workoutContext) => {
   }
   
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
     
     const prompt = `You are an elite AI sports coach assistant named "Coach AI". You're friendly, motivational, and data-driven.
 
