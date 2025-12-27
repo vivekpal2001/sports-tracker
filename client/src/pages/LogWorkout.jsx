@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Button, Input, Card } from '../components/ui';
 import { workoutAPI } from '../services/api';
+import DataImportHelp from '../components/DataImportHelp';
 
 const WORKOUT_TYPES = [
   { id: 'run', name: 'Run', icon: Activity, color: 'lime' },
@@ -297,7 +298,10 @@ export default function LogWorkout() {
               
               {/* File Upload */}
               <div className="mb-6">
-                <p className="text-gray-400 text-sm mb-3">Or import from file:</p>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-gray-400 text-sm">Or import from file:</p>
+                  <DataImportHelp />
+                </div>
                 <div
                   {...getRootProps()}
                   className={`
