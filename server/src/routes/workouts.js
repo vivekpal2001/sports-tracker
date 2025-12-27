@@ -10,7 +10,8 @@ import {
   deleteWorkout,
   uploadWorkoutFile,
   getWorkoutStats,
-  getChartData
+  getChartData,
+  getRecoveryScore
 } from '../controllers/workoutController.js';
 
 const router = express.Router();
@@ -48,6 +49,9 @@ router.use(protect);
 
 // Stats route (must be before :id route)
 router.get('/stats', getWorkoutStats);
+
+// Recovery score
+router.get('/recovery', getRecoveryScore);
 
 // Chart data for dashboard and analytics
 router.get('/chart-data', getChartData);

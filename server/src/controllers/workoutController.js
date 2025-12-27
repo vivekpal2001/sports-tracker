@@ -3,6 +3,7 @@ import { parseGPX, parseCSV } from '../utils/fileParser.js';
 import { checkAndUpdatePRs } from './prController.js';
 import { updateGoalProgress } from './goalController.js';
 import { checkAndAwardBadges } from '../services/badgeService.js';
+import { calculateRecoveryScore } from '../services/recoveryService.js';
 
 // @desc    Get all workouts for user
 // @route   GET /api/workouts
@@ -481,6 +482,22 @@ export const getChartData = async (req, res, next) => {
         startDate,
         endDate
       }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get recovery score
+// @route   GET /api/workouts/recovery
+// @access  Private
+export const getRecoveryScore = async (req, res, next) => {
+  try {
+    const recoveryData = await calculateRecoveryScore(req.user._id);
+    
+    res.json({
+      success: true,
+      data: recoveryData
     });
   } catch (error) {
     next(error);

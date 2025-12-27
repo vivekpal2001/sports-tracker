@@ -27,6 +27,7 @@ import {
   LoadingSpinner
 } from '../components/ui';
 import { workoutAPI, aiAPI, exportAPI } from '../services/api';
+import RecoveryScoreCard from '../components/RecoveryScoreCard';
 
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
@@ -309,8 +310,13 @@ export default function Dashboard() {
         </Card>
       </div>
       
-      {/* AI Insights Card */}
-      <Card glow className="relative overflow-hidden">
+      {/* Recovery Score & AI Insights Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Recovery Score */}
+        <RecoveryScoreCard />
+        
+        {/* AI Insights Card */}
+        <Card glow className="relative overflow-hidden">
         <div className="absolute top-0 right-0 w-32 h-32 bg-primary-500/10 rounded-full blur-3xl" />
         <div className="relative flex items-start gap-4">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-lime-500 flex items-center justify-center flex-shrink-0">
@@ -349,6 +355,7 @@ export default function Dashboard() {
           </div>
         </div>
       </Card>
+      </div>
       
       {/* Recent Workouts */}
       <div>

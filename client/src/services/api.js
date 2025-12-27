@@ -46,6 +46,7 @@ export const workoutAPI = {
   delete: (id) => api.delete(`/workouts/${id}`),
   getStats: (period = 'week') => api.get('/workouts/stats', { params: { period } }),
   getChartData: (params = {}) => api.get('/workouts/chart-data', { params }),
+  getRecoveryScore: () => api.get('/workouts/recovery'),
   upload: (file) => {
     const formData = new FormData();
     formData.append('file', file);
