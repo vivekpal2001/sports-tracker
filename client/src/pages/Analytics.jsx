@@ -60,8 +60,8 @@ export default function Analytics() {
     );
   }
   
-  // Generate chart data
-  const activityData = generateActivityData(weeklyData?.workouts || []);
+  // Generate chart data - pass period for proper formatting
+  const activityData = generateActivityData(weeklyData?.workouts || [], period);
   const typeDistribution = getTypeDistribution(stats?.byType || []);
   const weeklyTrend = generateWeeklyTrend();
   
@@ -135,9 +135,11 @@ export default function Analytics() {
       
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Weekly Activity Chart */}
+        {/* Activity Chart */}
         <Card>
-          <h3 className="text-lg font-semibold text-white mb-4">Weekly Activity</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">
+            {period === 'week' ? 'Weekly' : period === 'month' ? 'Monthly' : 'Yearly'} Activity
+          </h3>
           <div className="h-64">
             <VictoryChart
               containerComponent={
@@ -160,7 +162,15 @@ export default function Analytics() {
                 </linearGradient>
               </defs>
               <VictoryAxis
-                tickFormat={(t) => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][t - 1]}
+                tickFormat={(t) => {
+                  if (period === 'week') {
+                    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][t - 1] || '';
+                  } else if (period === 'month') {
+                    return t % 5 === 0 || t === 1 ? `${t}` : '';
+                  } else {
+                    return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][t - 1] || '';
+                  }
+                }}
                 style={{
                   axis: { stroke: 'transparent' },
                   tickLabels: { fill: '#9ca3af', fontSize: 11 },
@@ -280,16 +290,34 @@ export default function Analytics() {
 }
 
 // Helper functions
-function generateActivityData(workouts) {
-  const days = [1, 2, 3, 4, 5, 6, 7];
-  return days.map(day => {
-    const dayWorkouts = workouts.filter(w => {
-      const d = new Date(w.date).getDay();
-      return (d === 0 ? 7 : d) === day;
+function generateActivityData(workouts, period = 'week') {
+  if (period === 'week') {
+    const days = [1, 2, 3, 4, 5, 6, 7];
+    return days.map(day => {
+      const dayWorkouts = workouts.filter(w => {
+        const d = new Date(w.date).getDay();
+        return (d === 0 ? 7 : d) === day;
+      });
+      const totalDuration = dayWorkouts.reduce((sum, w) => sum + (w.duration || 0), 0);
+      return { x: day, y: totalDuration || Math.floor(Math.random() * 30) + 10 };
     });
-    const totalDuration = dayWorkouts.reduce((sum, w) => sum + (w.duration || 0), 0);
-    return { x: day, y: totalDuration || Math.floor(Math.random() * 60) + 20 };
-  });
+  } else if (period === 'month') {
+    // Generate 30 days of data
+    const days = Array.from({ length: 30 }, (_, i) => i + 1);
+    return days.map(day => {
+      const dayWorkouts = workouts.filter(w => new Date(w.date).getDate() === day);
+      const totalDuration = dayWorkouts.reduce((sum, w) => sum + (w.duration || 0), 0);
+      return { x: day, y: totalDuration || Math.floor(Math.random() * 20) + 5 };
+    });
+  } else {
+    // Year - show monthly totals
+    const months = Array.from({ length: 12 }, (_, i) => i + 1);
+    return months.map(month => {
+      const monthWorkouts = workouts.filter(w => new Date(w.date).getMonth() + 1 === month);
+      const totalDuration = monthWorkouts.reduce((sum, w) => sum + (w.duration || 0), 0);
+      return { x: month, y: totalDuration || Math.floor(Math.random() * 100) + 50 };
+    });
+  }
 }
 
 function getTypeDistribution(byType) {

@@ -279,7 +279,15 @@ export default function Dashboard() {
                 </linearGradient>
               </defs>
               <VictoryAxis
-                tickFormat={(t) => ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][t - 1]}
+                tickFormat={(t) => {
+                  if (chartPeriod === 'week') {
+                    return ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][t - 1] || '';
+                  } else if (chartPeriod === 'month') {
+                    return t % 5 === 0 || t === 1 ? `${t}` : '';
+                  } else {
+                    return ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][t - 1] || '';
+                  }
+                }}
                 style={{
                   axis: { stroke: 'transparent' },
                   tickLabels: { fill: '#9ca3af', fontSize: 12 },
