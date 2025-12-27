@@ -15,8 +15,8 @@ import {
   Plus,
   User
 } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
-import { Button } from '../components/ui';
+import { useAuth } from '../../context/AuthContext';
+import { Button } from '../ui';
 
 const NAV_ITEMS = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
