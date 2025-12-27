@@ -1,20 +1,21 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import Groq from 'groq-sdk';
 import Workout from '../models/Workout.js';
 
-// Initialize Gemini AI
-const genAI = process.env.GEMINI_API_KEY 
-  ? new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+// Initialize Groq AI
+const groq = process.env.GROQ_API_KEY 
+  ? new Groq({ apiKey: process.env.GROQ_API_KEY })
   : null;
+
+// Default model - Groq supports: llama-3.3-70b-versatile, llama-3.1-8b-instant, mixtral-8x7b-32768
+const MODEL = 'llama-3.3-70b-versatile';
 
 // Analyze workouts and generate insights
 export const analyzePerformance = async (userId, workouts) => {
-  if (!genAI) {
+  if (!groq) {
     return generateMockInsights(workouts);
   }
   
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
-    
     // Prepare workout summary for AI
     const workoutSummary = prepareWorkoutSummary(workouts);
     
@@ -23,7 +24,7 @@ export const analyzePerformance = async (userId, workouts) => {
 WORKOUT DATA:
 ${JSON.stringify(workoutSummary, null, 2)}
 
-Provide your analysis in the following JSON format:
+Provide your analysis in the following JSON format (ONLY output valid JSON, no markdown):
 {
   "performanceScore": <number 0-100>,
   "scoreBreakdown": {
@@ -65,9 +66,15 @@ Provide your analysis in the following JSON format:
 
 Be specific, actionable, and athlete-friendly in your recommendations. Focus on sustainable performance improvement.`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const completion = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: MODEL,
+      temperature: 0.7,
+      max_tokens: 2000,
+      response_format: { type: 'json_object' }
+    });
+    
+    const text = completion.choices[0]?.message?.content || '';
     
     // Extract JSON from response
     const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -84,9 +91,9 @@ Be specific, actionable, and athlete-friendly in your recommendations. Focus on 
 
 // Generate chat response for AI assistant
 export const generateChatResponse = async (userId, message, workoutContext) => {
-  if (!genAI) {
+  if (!groq) {
     return {
-      response: "I'm currently running in demo mode. To get AI-powered insights, please configure your Gemini API key. In the meantime, I can tell you that your training data shows good consistency!",
+      response: "I'm currently running in demo mode. To get AI-powered insights, please configure your Groq API key. In the meantime, I can tell you that your training data shows good consistency!",
       suggestions: [
         "View your performance trends",
         "Log a new workout",
@@ -96,32 +103,69 @@ export const generateChatResponse = async (userId, message, workoutContext) => {
   }
   
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
-    
-    const prompt = `You are an elite AI sports coach assistant named "Coach AI". You're friendly, motivational, and data-driven.
+    const systemPrompt = `You are "Coach AI" — an elite sports performance coach and fitness mentor with expertise in:
 
-ATHLETE'S RECENT WORKOUT DATA:
+🏋️ TRAINING & EXERCISE
+- Strength training, cardio, HIIT, endurance, mobility
+- Periodization, progressive overload, deload strategies
+- Form correction, injury prevention, movement patterns
+- Sport-specific training for running, cycling, swimming, CrossFit
+
+🥗 NUTRITION & DIET
+- Pre/post workout nutrition, macros, meal timing
+- Hydration strategies, supplements (evidence-based)
+- Cutting, bulking, body recomposition advice
+- Recovery nutrition, anti-inflammatory foods
+
+😴 RECOVERY & WELLNESS
+- Sleep optimization, rest days, active recovery
+- Stress management, overtraining prevention
+- HRV, fatigue monitoring, readiness indicators
+- Stretching, foam rolling, mobility work
+
+📊 DATA-DRIVEN COACHING
+- Analyze workout patterns, identify trends
+- Provide personalized recommendations based on their data
+- Track progress, celebrate wins, address weaknesses
+
+PERSONALITY:
+- Be encouraging, motivating, and supportive
+- Give crisp, actionable advice (2-4 sentences max)
+- Use simple language, avoid jargon unless asked
+- Reference their actual workout data when relevant
+- Be honest about limitations, suggest professional help when needed
+
+RESPONSE STYLE:
+- Direct and to-the-point
+- Use bullet points for complex answers
+- Include 1 actionable tip per response
+- Be conversational, not robotic`;
+
+    const userPrompt = `ATHLETE'S WORKOUT DATA:
 ${JSON.stringify(workoutContext, null, 2)}
 
-ATHLETE'S MESSAGE: "${message}"
+ATHLETE'S QUESTION: "${message}"
 
-Respond as a knowledgeable sports coach would. Be:
-- Encouraging and motivational
-- Data-driven when referencing their workouts
-- Specific with advice
-- Brief but helpful (2-4 sentences max)
+Respond as Coach AI. Keep it crisp (2-4 sentences). Reference their data if relevant.
 
-Also provide 2-3 suggested follow-up questions they might want to ask.
-
-Format your response as JSON:
+Format as JSON ONLY:
 {
-  "response": "<your response>",
-  "suggestions": ["<suggestion 1>", "<suggestion 2>", "<suggestion 3>"]
+  "response": "<your coaching response>",
+  "suggestions": ["<follow-up question 1>", "<follow-up question 2>", "<follow-up question 3>"]
 }`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    const completion = await groq.chat.completions.create({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ],
+      model: MODEL,
+      temperature: 0.7,
+      max_tokens: 600,
+      response_format: { type: 'json_object' }
+    });
+    
+    const text = completion.choices[0]?.message?.content || '';
     
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (jsonMatch) {

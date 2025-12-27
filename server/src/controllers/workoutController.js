@@ -180,18 +180,18 @@ export const uploadWorkoutFile = async (req, res, next) => {
       });
     }
     
-    // Create workout from parsed data
-    const workoutData = {
+    // Create workouts from parsed data (now supports multiple)
+    const workoutsToCreate = parsedData.workouts.map((w, idx) => ({
       user: req.user._id,
       type: 'run',
-      title: parsedData.title || `Imported ${ext.toUpperCase()} workout`,
-      date: parsedData.date || new Date(),
-      duration: parsedData.duration,
+      title: w.title || `Imported ${ext.toUpperCase()} workout ${idx + 1}`,
+      date: w.date || new Date(),
+      duration: w.duration || undefined,
       run: {
-        distance: parsedData.distance,
-        pace: parsedData.pace,
-        avgHeartRate: parsedData.avgHeartRate,
-        elevation: parsedData.elevation
+        distance: w.distance || undefined,
+        pace: w.pace || undefined,
+        avgHeartRate: w.avgHeartRate || undefined,
+        elevation: w.elevation || undefined
       },
       uploadedFile: {
         filename,
@@ -199,14 +199,15 @@ export const uploadWorkoutFile = async (req, res, next) => {
         type: ext,
         path: filepath
       }
-    };
+    }));
     
-    const workout = await Workout.create(workoutData);
+    const createdWorkouts = await Workout.insertMany(workoutsToCreate);
     
     res.status(201).json({
       success: true,
-      data: workout,
-      parsedData
+      message: `Successfully imported ${createdWorkouts.length} workout(s)`,
+      data: createdWorkouts,
+      count: createdWorkouts.length
     });
   } catch (error) {
     next(error);

@@ -17,9 +17,11 @@ export const parseGPX = async (filepath) => {
     
     if (points.length === 0) {
       return {
-        title: track?.name?.[0] || 'GPX Import',
-        distance: 0,
-        duration: 0
+        workouts: [{
+          title: track?.name?.[0] || 'GPX Import',
+          distance: 0,
+          duration: 0
+        }]
       };
     }
     
@@ -72,13 +74,15 @@ export const parseGPX = async (filepath) => {
       : null;
     
     return {
-      title: track?.name?.[0] || 'GPX Import',
-      date: startTime,
-      distance: Math.round(totalDistance * 100) / 100,
-      duration,
-      pace: pace ? Math.round(pace * 100) / 100 : null,
-      elevation: Math.round(elevationGain),
-      avgHeartRate
+      workouts: [{
+        title: track?.name?.[0] || 'GPX Import',
+        date: startTime,
+        distance: Math.round(totalDistance * 100) / 100,
+        duration,
+        pace: pace ? Math.round(pace * 100) / 100 : null,
+        elevation: Math.round(elevationGain),
+        avgHeartRate
+      }]
     };
   } catch (error) {
     console.error('GPX Parsing Error:', error);
@@ -86,7 +90,7 @@ export const parseGPX = async (filepath) => {
   }
 };
 
-// Parse CSV file (assumes standard format with headers)
+// Parse CSV file - now handles multiple rows as separate workouts
 export const parseCSV = async (filepath) => {
   try {
     const content = await fs.readFile(filepath, 'utf-8');
@@ -96,33 +100,109 @@ export const parseCSV = async (filepath) => {
       throw new Error('CSV file is empty or has no data rows');
     }
     
-    const headers = lines[0].toLowerCase().split(',').map(h => h.trim());
-    const data = lines.slice(1).map(line => {
-      const values = line.split(',');
-      const row = {};
-      headers.forEach((header, i) => {
-        row[header] = values[i]?.trim();
-      });
-      return row;
-    });
+    // Parse headers - normalize them
+    const headers = lines[0].toLowerCase().split(',').map(h => h.trim().replace(/['"]/g, ''));
     
-    // Try to extract common fields
-    const firstRow = data[0];
-    
-    return {
-      title: firstRow.title || firstRow.name || 'CSV Import',
-      date: firstRow.date ? new Date(firstRow.date) : new Date(),
-      distance: parseFloat(firstRow.distance) || 0,
-      duration: parseInt(firstRow.duration) || 0,
-      avgHeartRate: parseInt(firstRow.heart_rate || firstRow.hr) || null,
-      elevation: parseFloat(firstRow.elevation) || 0,
-      rawData: data
+    // Map common header variations
+    const headerMap = {
+      'date': ['date', 'workout_date', 'activity_date', 'time'],
+      'title': ['title', 'name', 'activity', 'workout', 'workout_name', 'activity_name'],
+      'duration': ['duration', 'time', 'minutes', 'duration_minutes', 'elapsed_time', 'total_time'],
+      'distance': ['distance', 'km', 'kilometers', 'miles', 'dist'],
+      'pace': ['pace', 'avg_pace', 'average_pace', 'min_per_km'],
+      'elevation': ['elevation', 'elev', 'elevation_gain', 'ascent', 'gain'],
+      'heart_rate': ['heart_rate', 'hr', 'avg_hr', 'avg_heart_rate', 'average_heart_rate', 'avg_heartrate'],
+      'calories': ['calories', 'cal', 'kcal', 'energy']
     };
+    
+    // Find which headers match
+    const findHeader = (variations) => {
+      for (const v of variations) {
+        const idx = headers.indexOf(v);
+        if (idx !== -1) return idx;
+      }
+      return -1;
+    };
+    
+    const indices = {
+      date: findHeader(headerMap.date),
+      title: findHeader(headerMap.title),
+      duration: findHeader(headerMap.duration),
+      distance: findHeader(headerMap.distance),
+      pace: findHeader(headerMap.pace),
+      elevation: findHeader(headerMap.elevation),
+      heart_rate: findHeader(headerMap.heart_rate),
+      calories: findHeader(headerMap.calories)
+    };
+    
+    // Parse each data row as a workout
+    const workouts = [];
+    
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (!line) continue;
+      
+      // Handle CSV with quoted values
+      const values = parseCSVLine(line);
+      
+      const getValue = (idx) => idx >= 0 && values[idx] ? values[idx].trim().replace(/['"]/g, '') : null;
+      
+      const dateStr = getValue(indices.date);
+      let date = new Date();
+      if (dateStr) {
+        const parsed = new Date(dateStr);
+        if (!isNaN(parsed.getTime())) {
+          date = parsed;
+        }
+      }
+      
+      const workout = {
+        title: getValue(indices.title) || `Imported Workout ${i}`,
+        date,
+        duration: parseInt(getValue(indices.duration)) || 0,
+        distance: parseFloat(getValue(indices.distance)) || 0,
+        pace: parseFloat(getValue(indices.pace)) || null,
+        elevation: parseFloat(getValue(indices.elevation)) || 0,
+        avgHeartRate: parseInt(getValue(indices.heart_rate)) || null,
+        calories: parseInt(getValue(indices.calories)) || null
+      };
+      
+      workouts.push(workout);
+    }
+    
+    if (workouts.length === 0) {
+      throw new Error('No valid workout data found in CSV');
+    }
+    
+    return { workouts };
   } catch (error) {
     console.error('CSV Parsing Error:', error);
-    throw new Error('Failed to parse CSV file');
+    throw new Error('Failed to parse CSV file: ' + error.message);
   }
 };
+
+// Parse a CSV line handling quoted values
+function parseCSVLine(line) {
+  const values = [];
+  let current = '';
+  let inQuotes = false;
+  
+  for (let i = 0; i < line.length; i++) {
+    const char = line[i];
+    
+    if (char === '"' && (i === 0 || line[i-1] !== '\\')) {
+      inQuotes = !inQuotes;
+    } else if (char === ',' && !inQuotes) {
+      values.push(current);
+      current = '';
+    } else {
+      current += char;
+    }
+  }
+  values.push(current);
+  
+  return values;
+}
 
 // Haversine formula for distance calculation
 function calculateHaversineDistance(lat1, lon1, lat2, lon2) {
