@@ -75,10 +75,15 @@ export default function Goals() {
     setCreating(true);
     
     try {
-      await goalAPI.create({
-        ...newGoal,
-        title: newGoal.title || GOAL_TYPES.find(g => g.type === newGoal.type)?.name
-      });
+      const goalData = {
+        type: newGoal.type,
+        title: newGoal.title || GOAL_TYPES.find(g => g.type === newGoal.type)?.name,
+        target: newGoal.target,
+        unit: newGoal.unit,
+        endDate: newGoal.endDate || getDefaultEndDate(newGoal.type)
+      };
+      
+      await goalAPI.create(goalData);
       
       setShowCreateModal(false);
       setNewGoal({
