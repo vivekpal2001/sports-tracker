@@ -83,3 +83,11 @@ export const badgeAPI = {
   getDefinitions: () => api.get('/badges/definitions'),
   sync: () => api.post('/badges/sync')
 };
+
+export const trainingPlanAPI = {
+  getAll: (status) => api.get('/training-plans', { params: { status } }),
+  getOne: (id) => api.get(`/training-plans/${id}`),
+  generate: (data) => api.post('/training-plans/generate', data),
+  completeWorkout: (id, data) => api.put(`/training-plans/${id}/workout`, data),
+  delete: (id) => api.delete(`/training-plans/${id}`)
+};

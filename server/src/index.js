@@ -14,6 +14,7 @@ import exportRoutes from './routes/export.js';
 import prRoutes from './routes/pr.js';
 import goalRoutes from './routes/goals.js';
 import badgeRoutes from './routes/badges.js';
+import trainingPlanRoutes from './routes/trainingPlan.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -48,6 +49,7 @@ app.use('/api/export', exportRoutes);
 app.use('/api/pr', prRoutes);
 app.use('/api/goals', goalRoutes);
 app.use('/api/badges', badgeRoutes);
+app.use('/api/training-plans', trainingPlanRoutes);
 
 // Error handler
 app.use(errorHandler);

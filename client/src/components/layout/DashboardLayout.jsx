@@ -16,7 +16,8 @@ import {
   User,
   Trophy,
   Target,
-  Award
+  Award,
+  Calendar
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui';
@@ -24,6 +25,7 @@ import { Button } from '../ui';
 const NAV_ITEMS = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/dashboard/workouts', icon: Dumbbell, label: 'Workouts' },
+  { path: '/dashboard/training-plan', icon: Calendar, label: 'Training Plan' },
   { path: '/dashboard/goals', icon: Target, label: 'Goals' },
   { path: '/dashboard/records', icon: Trophy, label: 'Records' },
   { path: '/dashboard/badges', icon: Award, label: 'Badges' },

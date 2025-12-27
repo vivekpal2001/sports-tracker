@@ -15,6 +15,7 @@ import Settings from './pages/Settings';
 import PersonalRecords from './pages/PersonalRecords';
 import Goals from './pages/Goals';
 import Badges from './pages/Badges';
+import TrainingPlan from './pages/TrainingPlan';
 
 // Layout
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -109,6 +110,11 @@ export default function App() {
       <Route path="/dashboard/badges" element={
         <ProtectedRoute>
           <Badges />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/training-plan" element={
+        <ProtectedRoute>
+          <TrainingPlan />
         </ProtectedRoute>
       } />
       
