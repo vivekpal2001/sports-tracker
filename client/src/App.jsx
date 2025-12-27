@@ -12,6 +12,7 @@ import LogWorkout from './pages/LogWorkout';
 import Insights from './pages/Insights';
 import Analytics from './pages/Analytics';
 import Settings from './pages/Settings';
+import PersonalRecords from './pages/PersonalRecords';
 
 // Layout
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -91,6 +92,11 @@ export default function App() {
       <Route path="/dashboard/settings" element={
         <ProtectedRoute>
           <Settings />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/records" element={
+        <ProtectedRoute>
+          <PersonalRecords />
         </ProtectedRoute>
       } />
       

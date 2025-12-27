@@ -64,3 +64,8 @@ export const aiAPI = {
 export const exportAPI = {
   trainingPlan: () => api.get('/export/training-plan', { responseType: 'blob' })
 };
+
+export const prAPI = {
+  getAll: () => api.get('/pr'),
+  getHistory: (type) => api.get(`/pr/history/${type}`)
+};

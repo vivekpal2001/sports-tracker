@@ -1,5 +1,6 @@
 import Workout from '../models/Workout.js';
 import { parseGPX, parseCSV } from '../utils/fileParser.js';
+import { checkAndUpdatePRs } from './prController.js';
 
 // @desc    Get all workouts for user
 // @route   GET /api/workouts
@@ -83,9 +84,13 @@ export const createWorkout = async (req, res, next) => {
     
     const workout = await Workout.create(workoutData);
     
+    // Check and update personal records
+    const newPRs = await checkAndUpdatePRs(req.user._id, workout);
+    
     res.status(201).json({
       success: true,
-      data: workout
+      data: workout,
+      newPRs: newPRs.length > 0 ? newPRs : undefined
     });
   } catch (error) {
     next(error);
