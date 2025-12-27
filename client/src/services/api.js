@@ -69,3 +69,10 @@ export const prAPI = {
   getAll: () => api.get('/pr'),
   getHistory: (type) => api.get(`/pr/history/${type}`)
 };
+
+export const goalAPI = {
+  getAll: (status) => api.get('/goals', { params: { status } }),
+  create: (data) => api.post('/goals', data),
+  update: (id, data) => api.put(`/goals/${id}`, data),
+  delete: (id) => api.delete(`/goals/${id}`)
+};
