@@ -11,6 +11,7 @@ import Workouts from './pages/Workouts';
 import LogWorkout from './pages/LogWorkout';
 import Insights from './pages/Insights';
 import Analytics from './pages/Analytics';
+import Settings from './pages/Settings';
 
 // Layout
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -85,6 +86,11 @@ export default function App() {
       <Route path="/dashboard/analytics" element={
         <ProtectedRoute>
           <Analytics />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/settings" element={
+        <ProtectedRoute>
+          <Settings />
         </ProtectedRoute>
       } />
       
