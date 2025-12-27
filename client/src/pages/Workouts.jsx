@@ -11,10 +11,12 @@ import {
   Trash2,
   Plus,
   Search,
-  Filter
+  Filter,
+  ChevronRight
 } from 'lucide-react';
 import { Card, Button, LoadingSpinner } from '../components/ui';
 import { workoutAPI } from '../services/api';
+import WorkoutDetailModal from '../components/WorkoutDetailModal';
 
 const TYPE_CONFIG = {
   run: { icon: Activity, color: 'lime', label: 'Run' },
@@ -29,6 +31,7 @@ export default function Workouts() {
   const [filter, setFilter] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [deleting, setDeleting] = useState(null);
+  const [selectedWorkout, setSelectedWorkout] = useState(null);
   
   useEffect(() => {
     fetchWorkouts();
@@ -145,7 +148,11 @@ export default function Workouts() {
                   transition={{ delay: i * 0.05 }}
                   layout
                 >
-                  <Card hover={false} className="flex items-center gap-4 py-4">
+                  <Card 
+                    hover={true} 
+                    className="flex items-center gap-4 py-4 cursor-pointer group"
+                    onClick={() => setSelectedWorkout(workout)}
+                  >
                     <div className={`
                       w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0
                       ${config?.color === 'lime' ? 'bg-lime-500/20 text-lime-500' : ''}
@@ -207,9 +214,15 @@ export default function Workouts() {
                       )}
                     </div>
                     
-                    {/* Actions */}
+                    {/* View indicator */}
+                    <ChevronRight className="w-5 h-5 text-gray-500 group-hover:text-primary-500 transition-colors" />
+                    
+                    {/* Delete Action */}
                     <button
-                      onClick={() => handleDelete(workout._id)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDelete(workout._id);
+                      }}
                       disabled={deleting === workout._id}
                       className="p-2 rounded-lg hover:bg-crimson-500/10 text-gray-400 hover:text-crimson-500 transition-colors"
                     >
@@ -233,6 +246,14 @@ export default function Workouts() {
           )}
         </AnimatePresence>
       </div>
+      
+      {/* Workout Detail Modal */}
+      {selectedWorkout && (
+        <WorkoutDetailModal 
+          workout={selectedWorkout} 
+          onClose={() => setSelectedWorkout(null)} 
+        />
+      )}
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Calendar } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ChevronLeft, ChevronRight, Calendar, Flame, Clock, TrendingUp } from 'lucide-react';
 import { workoutAPI } from '../services/api';
 
 const MONTH_NAMES = [
@@ -15,6 +15,7 @@ export default function CalendarHeatmap() {
   const [heatmapData, setHeatmapData] = useState({});
   const [loading, setLoading] = useState(true);
   const [selectedDay, setSelectedDay] = useState(null);
+  const [hoveredDay, setHoveredDay] = useState(null);
   
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
@@ -120,7 +121,7 @@ export default function CalendarHeatmap() {
     return 'bg-primary-500';
   };
   
-  const isCurrentMonth = () => {
+  const isCurrentMonthView = () => {
     const now = new Date();
     return month === now.getMonth() && year === now.getFullYear();
   };
@@ -149,12 +150,12 @@ export default function CalendarHeatmap() {
           <button
             onClick={goToNextMonth}
             className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
-            disabled={isCurrentMonth()}
+            disabled={isCurrentMonthView()}
           >
-            <ChevronRight className={`w-5 h-5 ${isCurrentMonth() ? 'opacity-30' : ''}`} />
+            <ChevronRight className={`w-5 h-5 ${isCurrentMonthView() ? 'opacity-30' : ''}`} />
           </button>
           
-          {!isCurrentMonth() && (
+          {!isCurrentMonthView() && (
             <button
               onClick={goToCurrentMonth}
               className="ml-2 px-3 py-1 text-sm rounded-lg bg-primary-500/20 text-primary-500 hover:bg-primary-500/30 transition-colors"
@@ -189,7 +190,9 @@ export default function CalendarHeatmap() {
                   initial={{ opacity: 0, scale: 0.8 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: (weekIdx * 7 + dayIdx) * 0.01 }}
-                  className="relative"
+                  className="relative group"
+                  onMouseEnter={() => dayInfo.isCurrentMonth && dayInfo.workouts > 0 && setHoveredDay(dayInfo.day)}
+                  onMouseLeave={() => setHoveredDay(null)}
                 >
                   <button
                     onClick={() => dayInfo.isCurrentMonth && setSelectedDay(selectedDay === dayInfo.day ? null : dayInfo.day)}
@@ -211,6 +214,42 @@ export default function CalendarHeatmap() {
                       </span>
                     )}
                   </button>
+                  
+                  {/* Hover Tooltip */}
+                  <AnimatePresence>
+                    {hoveredDay === dayInfo.day && dayInfo.workouts > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 5, scale: 0.95 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={{ opacity: 0, y: 5, scale: 0.95 }}
+                        className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-20 pointer-events-none"
+                      >
+                        <div className="bg-dark-400 border border-white/20 rounded-lg px-3 py-2 shadow-xl min-w-[140px]">
+                          <p className="text-white font-medium text-sm mb-2 text-center">
+                            {MONTH_NAMES[month]} {dayInfo.day}
+                          </p>
+                          <div className="space-y-1 text-xs">
+                            <div className="flex items-center gap-2 text-gray-300">
+                              <Flame className="w-3 h-3 text-orange-500" />
+                              <span>{dayInfo.workouts} workout{dayInfo.workouts !== 1 ? 's' : ''}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-gray-300">
+                              <Clock className="w-3 h-3 text-primary-500" />
+                              <span>{dayInfo.duration} min</span>
+                            </div>
+                            {dayInfo.distance > 0 && (
+                              <div className="flex items-center gap-2 text-gray-300">
+                                <TrendingUp className="w-3 h-3 text-lime-500" />
+                                <span>{dayInfo.distance.toFixed(1)} km</span>
+                              </div>
+                            )}
+                          </div>
+                          {/* Tooltip arrow */}
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-dark-400" />
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
               ))}
             </div>
