@@ -300,4 +300,223 @@ function generateMockInsights(workouts) {
   };
 }
 
-export default { analyzePerformance, generateChatResponse };
+// Generate personalized training plan using AI
+export const generatePersonalizedPlan = async (userId, planConfig, workoutHistory, recoveryScore) => {
+  const { type, difficulty, duration, goal } = planConfig;
+  
+  if (!groq) {
+    return generateFallbackPlan(type, difficulty, duration);
+  }
+  
+  try {
+    // Prepare workout history summary
+    const historySummary = prepareHistoryForPlan(workoutHistory);
+    
+    const prompt = `You are an elite sports coach creating a personalized ${duration}-week training plan.
+
+ATHLETE PROFILE:
+- Plan Type: ${type} (${getPlanDescription(type)})
+- Experience Level: ${difficulty}
+- Goal: ${goal || `Complete ${type} training`}
+- Recovery Score: ${recoveryScore || 75}/100
+
+RECENT TRAINING HISTORY (Last 60 days):
+${JSON.stringify(historySummary, null, 2)}
+
+Generate a detailed ${duration}-week training plan. For each week, provide 7 days of workouts.
+
+IMPORTANT RULES:
+1. If recovery score < 50, reduce intensity and add more rest days
+2. Base workout difficulty on their actual training history
+3. Progressive overload - each week should build on the previous
+4. Include 1 rest day minimum per week
+5. For running plans: include easy runs, tempo runs, intervals, and long runs
+6. For strength plans: include upper body, lower body, and full body days
+
+Output ONLY valid JSON in this exact format:
+{
+  "planName": "<personalized plan name>",
+  "weeklyOverview": "<2 sentence overview of the plan structure>",
+  "weeks": [
+    {
+      "weekNumber": 1,
+      "theme": "<Build Base|Speed Work|Peak|Taper|Recovery>",
+      "totalDistance": <km for running plans, 0 for strength>,
+      "workouts": [
+        {
+          "day": 0,
+          "dayName": "Sunday",
+          "type": "<run|lift|cardio|cross-training|rest>",
+          "name": "<workout name>",
+          "description": "<1-2 sentence description>",
+          "duration": <minutes>,
+          "distance": <km if applicable, null otherwise>,
+          "intensity": "<easy|moderate|hard>"
+        }
+      ]
+    }
+  ],
+  "tips": ["<tip 1>", "<tip 2>", "<tip 3>"]
+}`;
+
+    const completion = await groq.chat.completions.create({
+      messages: [{ role: 'user', content: prompt }],
+      model: MODEL,
+      temperature: 0.7,
+      max_tokens: 4000,
+      response_format: { type: 'json_object' }
+    });
+    
+    const text = completion.choices[0]?.message?.content || '';
+    
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      const parsed = JSON.parse(jsonMatch[0]);
+      return {
+        success: true,
+        aiGenerated: true,
+        ...parsed
+      };
+    }
+    
+    return generateFallbackPlan(type, difficulty, duration);
+  } catch (error) {
+    console.error('AI Plan Generation Error:', error);
+    return generateFallbackPlan(type, difficulty, duration);
+  }
+};
+
+// Prepare workout history for AI analysis
+function prepareHistoryForPlan(workouts) {
+  if (!workouts || workouts.length === 0) {
+    return {
+      totalWorkouts: 0,
+      avgWorkoutsPerWeek: 0,
+      primaryType: 'mixed',
+      avgDuration: 0,
+      maxDistance: 0,
+      avgRpe: 5
+    };
+  }
+  
+  const now = new Date();
+  const sixtyDaysAgo = new Date(now - 60 * 24 * 60 * 60 * 1000);
+  const recentWorkouts = workouts.filter(w => new Date(w.date) >= sixtyDaysAgo);
+  
+  const typeCount = {};
+  let totalDuration = 0;
+  let maxDistance = 0;
+  let totalRpe = 0;
+  let rpeCount = 0;
+  
+  recentWorkouts.forEach(w => {
+    typeCount[w.type] = (typeCount[w.type] || 0) + 1;
+    totalDuration += w.duration || 0;
+    
+    if (w.type === 'run' && w.run?.distance) {
+      maxDistance = Math.max(maxDistance, w.run.distance);
+    }
+    
+    if (w.rpe) {
+      totalRpe += w.rpe;
+      rpeCount++;
+    }
+  });
+  
+  const primaryType = Object.entries(typeCount).sort((a, b) => b[1] - a[1])[0]?.[0] || 'mixed';
+  
+  return {
+    totalWorkouts: recentWorkouts.length,
+    avgWorkoutsPerWeek: Math.round(recentWorkouts.length / 8.5 * 10) / 10,
+    primaryType,
+    typeBreakdown: typeCount,
+    avgDuration: recentWorkouts.length > 0 ? Math.round(totalDuration / recentWorkouts.length) : 0,
+    maxDistance: Math.round(maxDistance * 10) / 10,
+    avgRpe: rpeCount > 0 ? Math.round(totalRpe / rpeCount * 10) / 10 : 5
+  };
+}
+
+function getPlanDescription(type) {
+  const descriptions = {
+    '5k': 'Training for a 5K race, focus on building base and speed',
+    '10k': 'Training for a 10K race, building endurance and tempo',
+    'half_marathon': 'Half marathon preparation with long runs and progressive mileage',
+    'marathon': 'Full marathon training with peak mileage weeks',
+    'general_fitness': 'Overall fitness improvement with mixed training',
+    'strength': 'Muscle building and strength development'
+  };
+  return descriptions[type] || descriptions.general_fitness;
+}
+
+// Fallback plan when AI is not available
+function generateFallbackPlan(type, difficulty, duration) {
+  const intensityMultiplier = {
+    beginner: 0.7,
+    intermediate: 1.0,
+    advanced: 1.3
+  }[difficulty] || 1.0;
+  
+  const weeks = [];
+  
+  for (let i = 0; i < duration; i++) {
+    const weekNumber = i + 1;
+    let theme = 'Build';
+    if (weekNumber <= 2) theme = 'Base Building';
+    else if (weekNumber === duration - 1) theme = 'Taper';
+    else if (weekNumber === duration) theme = 'Race Week';
+    else if (weekNumber % 4 === 0) theme = 'Recovery';
+    
+    const workouts = type === 'strength' 
+      ? generateStrengthWeek(intensityMultiplier)
+      : generateRunningWeek(weekNumber, duration, intensityMultiplier);
+    
+    weeks.push({
+      weekNumber,
+      theme,
+      totalDistance: workouts.reduce((sum, w) => sum + (w.distance || 0), 0),
+      workouts
+    });
+  }
+  
+  return {
+    success: true,
+    aiGenerated: false,
+    planName: `${type.replace('_', ' ').toUpperCase()} Training Plan`,
+    weeklyOverview: 'This plan progressively builds your fitness with structured workouts and recovery periods.',
+    weeks,
+    tips: [
+      'Listen to your body and take extra rest if needed',
+      'Stay hydrated and fuel properly before long workouts',
+      'Track your progress to stay motivated'
+    ]
+  };
+}
+
+function generateRunningWeek(weekNumber, totalWeeks, multiplier) {
+  const baseDistance = (15 + weekNumber * 2) * multiplier;
+  
+  return [
+    { day: 0, dayName: 'Sunday', type: 'rest', name: 'Rest Day', description: 'Full rest or light stretching', duration: 0, distance: null, intensity: 'easy' },
+    { day: 1, dayName: 'Monday', type: 'run', name: 'Easy Run', description: 'Conversational pace', duration: Math.round(30 * multiplier), distance: Math.round(baseDistance * 0.15 * 10) / 10, intensity: 'easy' },
+    { day: 2, dayName: 'Tuesday', type: 'cross-training', name: 'Cross Training', description: 'Cycling, swimming, or strength', duration: 40, distance: null, intensity: 'moderate' },
+    { day: 3, dayName: 'Wednesday', type: 'run', name: 'Tempo Run', description: 'Comfortably hard pace', duration: Math.round(35 * multiplier), distance: Math.round(baseDistance * 0.2 * 10) / 10, intensity: 'hard' },
+    { day: 4, dayName: 'Thursday', type: 'run', name: 'Easy Run', description: 'Recovery pace', duration: Math.round(25 * multiplier), distance: Math.round(baseDistance * 0.12 * 10) / 10, intensity: 'easy' },
+    { day: 5, dayName: 'Friday', type: 'lift', name: 'Strength', description: 'Lower body and core focus', duration: 40, distance: null, intensity: 'moderate' },
+    { day: 6, dayName: 'Saturday', type: 'run', name: 'Long Run', description: 'Build endurance at easy pace', duration: Math.round(60 * multiplier), distance: Math.round(baseDistance * 0.35 * 10) / 10, intensity: 'moderate' }
+  ];
+}
+
+function generateStrengthWeek(multiplier) {
+  return [
+    { day: 0, dayName: 'Sunday', type: 'rest', name: 'Rest Day', description: 'Complete rest', duration: 0, distance: null, intensity: 'easy' },
+    { day: 1, dayName: 'Monday', type: 'lift', name: 'Upper Body Push', description: 'Chest, shoulders, triceps', duration: Math.round(45 * multiplier), distance: null, intensity: 'hard' },
+    { day: 2, dayName: 'Tuesday', type: 'cardio', name: 'Cardio', description: 'Light cardio for recovery', duration: 30, distance: null, intensity: 'easy' },
+    { day: 3, dayName: 'Wednesday', type: 'lift', name: 'Lower Body', description: 'Squats, deadlifts, leg press', duration: Math.round(50 * multiplier), distance: null, intensity: 'hard' },
+    { day: 4, dayName: 'Thursday', type: 'rest', name: 'Active Recovery', description: 'Stretching and mobility', duration: 20, distance: null, intensity: 'easy' },
+    { day: 5, dayName: 'Friday', type: 'lift', name: 'Upper Body Pull', description: 'Back, biceps, rear delts', duration: Math.round(45 * multiplier), distance: null, intensity: 'hard' },
+    { day: 6, dayName: 'Saturday', type: 'lift', name: 'Full Body', description: 'Compound movements', duration: Math.round(40 * multiplier), distance: null, intensity: 'moderate' }
+  ];
+}
+
+export default { analyzePerformance, generateChatResponse, generatePersonalizedPlan };
+

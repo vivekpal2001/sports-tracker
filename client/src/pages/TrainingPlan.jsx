@@ -10,7 +10,9 @@ import {
   Trash2,
   X,
   Play,
-  Target
+  Target,
+  Sparkles,
+  Lightbulb
 } from 'lucide-react';
 import { Card, Button, LoadingSpinner } from '../components/ui';
 import { trainingPlanAPI } from '../services/api';
@@ -167,7 +169,15 @@ export default function TrainingPlan() {
                     {PLAN_TYPES.find(p => p.type === activePlan.type)?.icon || '📋'}
                   </span>
                   <div>
-                    <h2 className="text-xl font-bold text-white">{activePlan.name}</h2>
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-xl font-bold text-white">{activePlan.name}</h2>
+                      {activePlan.aiGenerated && (
+                        <span className="px-2 py-0.5 bg-primary-500/20 text-primary-500 text-xs rounded-full flex items-center gap-1">
+                          <Sparkles className="w-3 h-3" />
+                          AI Personalized
+                        </span>
+                      )}
+                    </div>
                     <p className="text-gray-400 text-sm">
                       Week {activePlan.currentWeek} of {activePlan.duration} • {currentWeek?.theme || 'Training'}
                     </p>
@@ -198,6 +208,28 @@ export default function TrainingPlan() {
               </div>
             </div>
           </Card>
+          
+          {/* AI Tips */}
+          {activePlan.tips && activePlan.tips.length > 0 && (
+            <Card className="bg-gradient-to-r from-primary-500/10 to-purple-500/10 border-primary-500/20">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary-500/20 flex items-center justify-center flex-shrink-0">
+                  <Lightbulb className="w-5 h-5 text-primary-500" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white mb-2">AI Training Tips</h3>
+                  <ul className="space-y-1">
+                    {activePlan.tips.map((tip, i) => (
+                      <li key={i} className="text-sm text-gray-300 flex items-start gap-2">
+                        <span className="text-primary-500">•</span>
+                        {tip}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+            </Card>
+          )}
           
           {/* Current Week Schedule */}
           <Card>
@@ -485,11 +517,14 @@ export default function TrainingPlan() {
                         className="flex-1 py-3 bg-primary-500 hover:bg-primary-400 text-dark-500 font-medium rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
                       >
                         {creating ? (
-                          'Creating...'
+                          <>
+                            <Sparkles className="w-4 h-4 animate-pulse" />
+                            Analyzing & Creating...
+                          </>
                         ) : (
                           <>
-                            <Play className="w-4 h-4" />
-                            Generate Plan
+                            <Sparkles className="w-4 h-4" />
+                            Generate AI Plan
                           </>
                         )}
                       </button>

@@ -1,5 +1,7 @@
 import TrainingPlan from '../models/TrainingPlan.js';
 import Workout from '../models/Workout.js';
+import { generatePersonalizedPlan } from '../services/aiService.js';
+import { calculateRecoveryScore } from '../services/recoveryService.js';
 
 // Plan templates for different goals
 const PLAN_TEMPLATES = {
@@ -61,8 +63,46 @@ export const generateTrainingPlan = async (req, res, next) => {
     const end = new Date(start);
     end.setDate(end.getDate() + (planDuration * 7));
     
-    // Generate weekly schedules
-    const weeks = generateWeeklySchedule(type, planDuration, difficulty || 'intermediate');
+    // Fetch user's workout history for personalization
+    const workoutHistory = await Workout.find({
+      user: req.user._id,
+      date: { $gte: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000) } // Last 60 days
+    }).sort({ date: -1 });
+    
+    // Get recovery score for intensity adjustment
+    let recoveryScore = 75;
+    try {
+      const recoveryData = await calculateRecoveryScore(req.user._id);
+      recoveryScore = recoveryData.score;
+    } catch (e) {
+      console.log('Could not get recovery score, using default');
+    }
+    
+    // Generate personalized plan using AI
+    const aiPlan = await generatePersonalizedPlan(
+      req.user._id,
+      { type, difficulty: difficulty || 'intermediate', duration: planDuration, goal },
+      workoutHistory,
+      recoveryScore
+    );
+    
+    // Transform AI response to match our schema
+    const weeks = aiPlan.weeks.map(week => ({
+      weekNumber: week.weekNumber,
+      theme: week.theme,
+      totalDistance: week.totalDistance || 0,
+      totalDuration: week.workouts.reduce((sum, w) => sum + (w.duration || 0), 0),
+      workouts: week.workouts.map(w => ({
+        day: w.day,
+        type: w.type,
+        name: w.name,
+        description: w.description,
+        duration: w.duration || 0,
+        distance: w.distance || undefined,
+        intensity: w.intensity || 'moderate',
+        completed: false
+      }))
+    }));
     
     // Calculate totals
     let totalWorkouts = 0;
@@ -79,7 +119,7 @@ export const generateTrainingPlan = async (req, res, next) => {
     
     const plan = await TrainingPlan.create({
       user: req.user._id,
-      name: goal || template.name,
+      name: aiPlan.planName || goal || template.name,
       type,
       goal,
       duration: planDuration,
@@ -91,12 +131,15 @@ export const generateTrainingPlan = async (req, res, next) => {
         totalWorkouts,
         targetDistance: totalDistance
       },
-      aiGenerated: true
+      aiGenerated: aiPlan.aiGenerated || false,
+      tips: aiPlan.tips || []
     });
     
     res.status(201).json({
       success: true,
-      data: plan
+      data: plan,
+      aiGenerated: aiPlan.aiGenerated,
+      tips: aiPlan.tips
     });
   } catch (error) {
     next(error);

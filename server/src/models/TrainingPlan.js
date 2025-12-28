@@ -103,7 +103,10 @@ const trainingPlanSchema = new mongoose.Schema({
   aiGenerated: {
     type: Boolean,
     default: true
-  }
+  },
+  tips: [{
+    type: String
+  }]
 }, {
   timestamps: true
 });
