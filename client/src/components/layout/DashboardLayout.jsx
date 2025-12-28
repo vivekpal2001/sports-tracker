@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui';
+import NotificationDropdown from '../NotificationDropdown';
 
 const NAV_ITEMS = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
@@ -160,10 +161,22 @@ export default function DashboardLayout({ children }) {
             </h1>
             
             {/* Actions */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-3">
+              {/* Notifications */}
+              <NotificationDropdown />
+              
+              {/* Profile */}
+              <Link to="/dashboard/profile" className="hidden sm:block">
+                <div className="p-2 rounded-xl hover:bg-white/10 transition-colors">
+                  <User className="w-5 h-5 text-gray-400" />
+                </div>
+              </Link>
+              
+              {/* Log Workout */}
               <Link to="/dashboard/log-workout">
                 <Button icon={Plus} size="sm">
-                  Log Workout
+                  <span className="hidden sm:inline">Log Workout</span>
+                  <span className="sm:hidden">Log</span>
                 </Button>
               </Link>
             </div>

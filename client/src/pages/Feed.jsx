@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { 
@@ -13,10 +13,11 @@ import {
   Plus,
   Image,
   Sparkles,
-  Trash2
+  Trash2,
+  Upload
 } from 'lucide-react';
 import { Card, Button, LoadingSpinner } from '../components/ui';
-import { feedAPI, userAPI } from '../services/api';
+import { feedAPI, userAPI, uploadAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
 const POST_TYPES = [
@@ -25,6 +26,8 @@ const POST_TYPES = [
   { value: 'progress', label: '📈 Progress', description: 'Show your gains' },
   { value: 'photo', label: '📸 Photo', description: 'Share a pic' }
 ];
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001';
 
 export default function Feed() {
   const { user: currentUser } = useAuth();
@@ -37,6 +40,7 @@ export default function Feed() {
   const [showSearch, setShowSearch] = useState(false);
   const [showCreatePost, setShowCreatePost] = useState(false);
   const [commentText, setCommentText] = useState({});
+  const fileInputRef = useRef(null);
   
   // Create post state
   const [newPost, setNewPost] = useState({
@@ -45,6 +49,8 @@ export default function Feed() {
     images: []
   });
   const [posting, setPosting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [previewImages, setPreviewImages] = useState([]);
   
   useEffect(() => {
     fetchFeed();
@@ -67,6 +73,43 @@ export default function Feed() {
     }
   };
   
+  const handleImageUpload = async (e) => {
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    
+    setUploading(true);
+    try {
+      const formData = new FormData();
+      for (let i = 0; i < files.length; i++) {
+        formData.append('images', files[i]);
+        // Create preview URL
+        setPreviewImages(prev => [...prev, URL.createObjectURL(files[i])]);
+      }
+      
+      const response = await uploadAPI.images(formData);
+      
+      // Add uploaded URLs to post
+      setNewPost(prev => ({
+        ...prev,
+        postType: 'photo',
+        images: [...prev.images, ...response.data.data.map(img => ({ url: img.url }))]
+      }));
+    } catch (error) {
+      console.error('Failed to upload images:', error);
+      alert('Failed to upload images. Max 5MB per image.');
+    } finally {
+      setUploading(false);
+    }
+  };
+  
+  const removeImage = (index) => {
+    setPreviewImages(prev => prev.filter((_, i) => i !== index));
+    setNewPost(prev => ({
+      ...prev,
+      images: prev.images.filter((_, i) => i !== index)
+    }));
+  };
+  
   const handleCreatePost = async () => {
     if (!newPost.content.trim()) return;
     
@@ -82,6 +125,7 @@ export default function Feed() {
       setActivities(prev => [response.data.data, ...prev]);
       setShowCreatePost(false);
       setNewPost({ content: '', postType: 'text', images: [] });
+      setPreviewImages([]);
     } catch (error) {
       console.error('Failed to create post:', error);
     } finally {
@@ -267,13 +311,61 @@ export default function Feed() {
                   <p className="text-xs text-gray-500 mt-1 text-right">{newPost.content.length}/2000</p>
                 </div>
                 
-                {/* Image placeholder - could add upload later */}
-                {newPost.postType === 'photo' && (
-                  <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center">
-                    <Image className="w-8 h-8 text-gray-500 mx-auto mb-2" />
-                    <p className="text-sm text-gray-400">Image upload coming soon!</p>
-                  </div>
-                )}
+                {/* Image Upload Section */}
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Add Photos</label>
+                  
+                  {/* Hidden File Input */}
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    onChange={handleImageUpload}
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                  />
+                  
+                  {/* Image Previews */}
+                  {previewImages.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2 mb-3">
+                      {previewImages.map((src, i) => (
+                        <div key={i} className="relative group">
+                          <img 
+                            src={src} 
+                            alt={`Preview ${i + 1}`} 
+                            className="w-full h-32 object-cover rounded-xl"
+                          />
+                          <button
+                            onClick={() => removeImage(i)}
+                            className="absolute top-2 right-2 p-1.5 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                          >
+                            <X className="w-4 h-4 text-white" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {/* Upload Button */}
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploading || previewImages.length >= 4}
+                    className="w-full border-2 border-dashed border-white/10 rounded-xl p-4 text-center hover:border-primary-500/50 transition-colors disabled:opacity-50"
+                  >
+                    {uploading ? (
+                      <div className="flex items-center justify-center gap-2 text-gray-400">
+                        <Sparkles className="w-5 h-5 animate-pulse" />
+                        <span>Uploading...</span>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2 text-gray-400">
+                        <Upload className="w-5 h-5" />
+                        <span>{previewImages.length >= 4 ? 'Max 4 images' : 'Upload Images'}</span>
+                      </div>
+                    )}
+                  </button>
+                </div>
               </div>
               
               {/* Footer */}
@@ -431,9 +523,14 @@ export default function Feed() {
                     
                     {/* Images */}
                     {activity.images && activity.images.length > 0 && (
-                      <div className="mt-3 rounded-xl overflow-hidden">
+                      <div className="mt-3 grid gap-2">
                         {activity.images.map((img, i) => (
-                          <img key={i} src={img.url} alt={img.caption || 'Post image'} className="w-full" />
+                          <img 
+                            key={i} 
+                            src={img.url.startsWith('http') ? img.url : `${API_URL}${img.url}`} 
+                            alt={img.caption || 'Post image'} 
+                            className="w-full rounded-xl object-cover max-h-96" 
+                          />
                         ))}
                       </div>
                     )}

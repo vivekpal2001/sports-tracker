@@ -127,3 +127,10 @@ export const notificationAPI = {
   delete: (id) => api.delete(`/notifications/${id}`)
 };
 
+export const uploadAPI = {
+  images: (formData) => api.post('/upload/images', formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  })
+};
+
+
