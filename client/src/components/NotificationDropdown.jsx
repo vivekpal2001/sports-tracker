@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Bell, Check, CheckCheck, Trash2, Heart, MessageCircle, User } from 'lucide-react';
-import { notificationAPI } from '../../services/api';
+import { notificationAPI } from '../services/api';
 
 export default function NotificationDropdown() {
   const [open, setOpen] = useState(false);
