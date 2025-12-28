@@ -110,3 +110,9 @@ export const feedAPI = {
   comment: (id, text) => api.post(`/feed/${id}/comment`, { text }),
   deleteComment: (id, commentId) => api.delete(`/feed/${id}/comment/${commentId}`)
 };
+
+export const leaderboardAPI = {
+  getFriends: (period, metric) => api.get('/leaderboard', { params: { period, metric } }),
+  getGlobal: (period, metric) => api.get('/leaderboard/global', { params: { period, metric } })
+};
+

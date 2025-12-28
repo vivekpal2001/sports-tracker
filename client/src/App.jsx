@@ -18,6 +18,7 @@ import Badges from './pages/Badges';
 import TrainingPlan from './pages/TrainingPlan';
 import Feed from './pages/Feed';
 import Profile from './pages/Profile';
+import Leaderboard from './pages/Leaderboard';
 
 // Layout
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -132,6 +133,11 @@ export default function App() {
       <Route path="/dashboard/profile/:id" element={
         <ProtectedRoute>
           <Profile />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/leaderboard" element={
+        <ProtectedRoute>
+          <Leaderboard />
         </ProtectedRoute>
       } />
       
