@@ -4,6 +4,7 @@ import {
   getFeed,
   getUserActivities,
   likeActivity,
+  reactToActivity,
   commentOnActivity,
   deleteComment,
   createPost,
@@ -24,7 +25,10 @@ router.get('/user/:id', protect, getUserActivities);
 // Delete a post
 router.delete('/:id', protect, deletePost);
 
-// Like/unlike an activity
+// React to an activity (new reactions system)
+router.post('/:id/react', protect, reactToActivity);
+
+// Like/unlike an activity (backward compat)
 router.post('/:id/like', protect, likeActivity);
 
 // Comments
@@ -32,4 +36,5 @@ router.post('/:id/comment', protect, commentOnActivity);
 router.delete('/:id/comment/:commentId', protect, deleteComment);
 
 export default router;
+
 

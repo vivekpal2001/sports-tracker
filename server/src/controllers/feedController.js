@@ -1,5 +1,6 @@
 import Activity from '../models/Activity.js';
 import User from '../models/User.js';
+import UserBadge from '../models/UserBadge.js';
 
 // @desc    Get activity feed (from followed users + own activities)
 // @route   GET /api/feed
@@ -21,6 +22,7 @@ export const getFeed = async (req, res, next) => {
       .populate('user', 'name avatar')
       .populate('workout', 'type date duration run.distance')
       .populate('targetUser', 'name avatar')
+      .populate('reactions.user', 'name')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(parseInt(limit));
@@ -30,15 +32,44 @@ export const getFeed = async (req, res, next) => {
       isPublic: true
     });
     
-    // Add isLiked flag for current user
-    const activitiesWithLiked = activities.map(a => ({
-      ...a.toJSON(),
-      isLiked: a.likes?.some(l => l.toString() === req.user._id.toString())
-    }));
+    // Get badges for each activity's user
+    const userIds = [...new Set(activities.map(a => a.user?._id?.toString()).filter(Boolean))];
+    const userBadges = await UserBadge.find({ user: { $in: userIds } })
+      .select('user badgeId')
+      .lean();
+    
+    const badgesByUser = {};
+    userBadges.forEach(b => {
+      if (!badgesByUser[b.user.toString()]) {
+        badgesByUser[b.user.toString()] = [];
+      }
+      badgesByUser[b.user.toString()].push(b.badgeId);
+    });
+    
+    // Add reaction info for current user
+    const activitiesWithData = activities.map(a => {
+      const json = a.toJSON();
+      const userReaction = a.reactions?.find(r => r.user?._id?.toString() === req.user._id.toString());
+      
+      // Summary of reactions
+      const reactionSummary = {};
+      a.reactions?.forEach(r => {
+        reactionSummary[r.type] = (reactionSummary[r.type] || 0) + 1;
+      });
+      
+      return {
+        ...json,
+        userReaction: userReaction?.type || null,
+        reactions: reactionSummary,
+        reactionCount: a.reactions?.length || 0,
+        isLiked: !!userReaction,
+        userBadges: badgesByUser[a.user?._id?.toString()]?.slice(0, 3) || []
+      };
+    });
     
     res.json({
       success: true,
-      data: activitiesWithLiked,
+      data: activitiesWithData,
       pagination: {
         page: parseInt(page),
         limit: parseInt(limit),
@@ -98,11 +129,21 @@ export const getUserActivities = async (req, res, next) => {
   }
 };
 
-// @desc    Like an activity
-// @route   POST /api/feed/:id/like
+// @desc    React to an activity (supports multiple reaction types)
+// @route   POST /api/feed/:id/react
 // @access  Private
-export const likeActivity = async (req, res, next) => {
+export const reactToActivity = async (req, res, next) => {
   try {
+    const { reactionType = '❤️' } = req.body;
+    const validReactions = ['💪', '🔥', '⚡', '🎯', '❤️'];
+    
+    if (!validReactions.includes(reactionType)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid reaction type'
+      });
+    }
+    
     const activity = await Activity.findById(req.params.id);
     
     if (!activity) {
@@ -112,34 +153,105 @@ export const likeActivity = async (req, res, next) => {
       });
     }
     
-    const alreadyLiked = activity.likes?.some(l => l.toString() === req.user._id.toString());
+    // Check if user already reacted
+    const existingReactionIndex = activity.reactions?.findIndex(
+      r => r.user.toString() === req.user._id.toString()
+    );
     
-    if (alreadyLiked) {
-      // Unlike
-      await Activity.findByIdAndUpdate(req.params.id, {
-        $pull: { likes: req.user._id }
-      });
+    if (existingReactionIndex > -1) {
+      const existingReaction = activity.reactions[existingReactionIndex];
       
-      res.json({
-        success: true,
-        liked: false,
-        likeCount: activity.likes.length - 1
-      });
-    } else {
-      // Like
-      await Activity.findByIdAndUpdate(req.params.id, {
-        $addToSet: { likes: req.user._id }
-      });
-      
-      res.json({
-        success: true,
-        liked: true,
-        likeCount: activity.likes.length + 1
-      });
+      if (existingReaction.type === reactionType) {
+        // Same reaction - remove it (toggle off)
+        activity.reactions.splice(existingReactionIndex, 1);
+        await activity.save();
+        
+        return res.json({
+          success: true,
+          reacted: false,
+          reactionType: null,
+          reactionCount: activity.reactions.length,
+          reactions: getReactionSummary(activity.reactions)
+        });
+      } else {
+        // Different reaction - update it
+        activity.reactions[existingReactionIndex].type = reactionType;
+        await activity.save();
+        
+        return res.json({
+          success: true,
+          reacted: true,
+          reactionType,
+          reactionCount: activity.reactions.length,
+          reactions: getReactionSummary(activity.reactions)
+        });
+      }
     }
+    
+    // Add new reaction
+    activity.reactions.push({
+      user: req.user._id,
+      type: reactionType
+    });
+    await activity.save();
+    
+    // Create notification if not own post
+    if (activity.user.toString() !== req.user._id.toString()) {
+      await createNotification(
+        activity.user,
+        req.user._id,
+        'reaction',
+        activity._id,
+        reactionType
+      );
+    }
+    
+    res.json({
+      success: true,
+      reacted: true,
+      reactionType,
+      reactionCount: activity.reactions.length,
+      reactions: getReactionSummary(activity.reactions)
+    });
   } catch (error) {
     next(error);
   }
+};
+
+// Helper to get reaction summary
+const getReactionSummary = (reactions) => {
+  const summary = {};
+  reactions?.forEach(r => {
+    summary[r.type] = (summary[r.type] || 0) + 1;
+  });
+  return summary;
+};
+
+// Helper to create notifications
+const createNotification = async (recipientId, senderId, type, activityId, reactionType) => {
+  // Avoid circular import by requiring inline
+  const Notification = (await import('../models/Notification.js')).default;
+  
+  try {
+    await Notification.create({
+      recipient: recipientId,
+      sender: senderId,
+      type,
+      activity: activityId,
+      reactionType
+    });
+  } catch (error) {
+    console.error('Error creating notification:', error);
+  }
+};
+
+// @desc    Like an activity (backward compatibility)
+// @route   POST /api/feed/:id/like
+// @access  Private
+export const likeActivity = async (req, res, next) => {
+  // Redirect to react with ❤️
+  req.body.reactionType = '❤️';
+  return reactToActivity(req, res, next);
 };
 
 // @desc    Comment on an activity

@@ -100,16 +100,26 @@ export default function Feed() {
     }
   };
   
-  const handleLike = async (activityId) => {
+  const REACTIONS = ['💪', '🔥', '⚡', '🎯', '❤️'];
+  const [showReactions, setShowReactions] = useState({});
+  
+  const handleReaction = async (activityId, reactionType) => {
     try {
-      const response = await feedAPI.like(activityId);
+      const response = await feedAPI.react(activityId, reactionType);
       setActivities(prev => prev.map(a => 
         a._id === activityId 
-          ? { ...a, isLiked: response.data.liked, likeCount: response.data.likeCount }
+          ? { 
+              ...a, 
+              isLiked: response.data.reacted,
+              userReaction: response.data.reactionType,
+              reactionCount: response.data.reactionCount,
+              reactions: response.data.reactions
+            }
           : a
       ));
+      setShowReactions(prev => ({ ...prev, [activityId]: false }));
     } catch (error) {
-      console.error('Failed to like:', error);
+      console.error('Failed to react:', error);
     }
   };
   
@@ -446,20 +456,72 @@ export default function Feed() {
                       </div>
                     )}
                   </div>
+                  {/* User Badges */}
+                  {activity.userBadges && activity.userBadges.length > 0 && (
+                    <div className="flex items-center gap-1 mb-3">
+                      {activity.userBadges.map((badge, i) => (
+                        <span key={i} className="text-lg" title={badge.replace(/_/g, ' ')}>
+                          {badge.includes('run') ? '🏃' : badge.includes('lift') ? '🏋️' : badge.includes('streak') ? '🔥' : '🏅'}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                   
-                  {/* Actions */}
-                  <div className="flex items-center gap-6 border-t border-white/10 pt-4">
-                    <button
-                      onClick={() => handleLike(activity._id)}
-                      className={`flex items-center gap-2 transition-colors ${
-                        activity.isLiked ? 'text-crimson-500' : 'text-gray-400 hover:text-crimson-500'
-                      }`}
-                    >
-                      <Heart className={`w-5 h-5 ${activity.isLiked ? 'fill-current' : ''}`} />
-                      <span>{activity.likeCount || 0}</span>
-                    </button>
+                  {/* Actions with Reactions */}
+                  <div className="flex items-center gap-6 border-t border-white/10 pt-4 relative">
+                    {/* Reaction Button */}
+                    <div className="relative">
+                      <button
+                        onClick={() => setShowReactions(prev => ({ ...prev, [activity._id]: !prev[activity._id] }))}
+                        onMouseEnter={() => setShowReactions(prev => ({ ...prev, [activity._id]: true }))}
+                        className={`flex items-center gap-2 transition-colors ${
+                          activity.isLiked ? 'text-primary-500' : 'text-gray-400 hover:text-primary-500'
+                        }`}
+                      >
+                        <span className="text-xl">{activity.userReaction || '❤️'}</span>
+                        <span>{activity.reactionCount || 0}</span>
+                      </button>
+                      
+                      {/* Reaction Picker */}
+                      <AnimatePresence>
+                        {showReactions[activity._id] && (
+                          <motion.div
+                            initial={{ opacity: 0, scale: 0.8, y: 10 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.8, y: 10 }}
+                            onMouseLeave={() => setShowReactions(prev => ({ ...prev, [activity._id]: false }))}
+                            className="absolute bottom-full left-0 mb-2 p-2 bg-dark-400 rounded-2xl border border-white/10 shadow-xl flex gap-1 z-10"
+                          >
+                            {REACTIONS.map(r => (
+                              <button
+                                key={r}
+                                onClick={() => handleReaction(activity._id, r)}
+                                className={`
+                                  text-2xl p-2 rounded-xl transition-all hover:scale-125 hover:bg-white/10
+                                  ${activity.userReaction === r ? 'bg-primary-500/20 scale-110' : ''}
+                                `}
+                              >
+                                {r}
+                              </button>
+                            ))}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
                     
-                    <button className="flex items-center gap-2 text-gray-400 hover:text-primary-500 transition-colors">
+                    {/* Reaction Summary */}
+                    {activity.reactions && Object.keys(activity.reactions).length > 0 && (
+                      <div className="flex items-center gap-1 text-sm">
+                        {Object.entries(activity.reactions).slice(0, 3).map(([type, count]) => (
+                          <span key={type} className="flex items-center gap-0.5">
+                            <span>{type}</span>
+                            <span className="text-gray-400">{count}</span>
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    
+                    <button className="flex items-center gap-2 text-gray-400 hover:text-primary-500 transition-colors ml-auto">
                       <MessageCircle className="w-5 h-5" />
                       <span>{activity.commentCount || 0}</span>
                     </button>

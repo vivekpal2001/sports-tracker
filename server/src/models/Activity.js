@@ -59,7 +59,24 @@ const activitySchema = new mongoose.Schema({
     type: String, // workout type
     value: mongoose.Schema.Types.Mixed
   },
-  // Engagement
+  // Engagement - Reactions (replaces simple likes)
+  reactions: [{
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: true
+    },
+    type: {
+      type: String,
+      enum: ['💪', '🔥', '⚡', '🎯', '❤️'],
+      default: '❤️'
+    },
+    createdAt: {
+      type: Date,
+      default: Date.now
+    }
+  }],
+  // Keep likes for backward compatibility
   likes: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User'
@@ -93,9 +110,14 @@ const activitySchema = new mongoose.Schema({
 activitySchema.index({ user: 1, createdAt: -1 });
 activitySchema.index({ createdAt: -1 });
 
-// Virtual for like count
+// Virtual for reaction count
+activitySchema.virtual('reactionCount').get(function() {
+  return this.reactions?.length || this.likes?.length || 0;
+});
+
+// Virtual for like count (backward compat)
 activitySchema.virtual('likeCount').get(function() {
-  return this.likes?.length || 0;
+  return this.reactions?.length || this.likes?.length || 0;
 });
 
 activitySchema.virtual('commentCount').get(function() {

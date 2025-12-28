@@ -107,6 +107,7 @@ export const feedAPI = {
   getFeed: (page = 1) => api.get('/feed', { params: { page } }),
   getUserActivities: (id, page = 1) => api.get(`/feed/user/${id}`, { params: { page } }),
   like: (id) => api.post(`/feed/${id}/like`),
+  react: (id, reactionType) => api.post(`/feed/${id}/react`, { reactionType }),
   comment: (id, text) => api.post(`/feed/${id}/comment`, { text }),
   deleteComment: (id, commentId) => api.delete(`/feed/${id}/comment/${commentId}`),
   createPost: (data) => api.post('/feed/post', data),
@@ -116,5 +117,13 @@ export const feedAPI = {
 export const leaderboardAPI = {
   getFriends: (period, metric) => api.get('/leaderboard', { params: { period, metric } }),
   getGlobal: (period, metric) => api.get('/leaderboard/global', { params: { period, metric } })
+};
+
+export const notificationAPI = {
+  getAll: (page = 1) => api.get('/notifications', { params: { page } }),
+  getCount: () => api.get('/notifications/count'),
+  markAsRead: (id) => api.put(`/notifications/${id}/read`),
+  markAllAsRead: () => api.put('/notifications/read-all'),
+  delete: (id) => api.delete(`/notifications/${id}`)
 };
 
