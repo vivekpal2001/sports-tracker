@@ -4,6 +4,7 @@ import { checkAndUpdatePRs } from './prController.js';
 import { updateGoalProgress } from './goalController.js';
 import { checkAndAwardBadges } from '../services/badgeService.js';
 import { calculateRecoveryScore } from '../services/recoveryService.js';
+import { createActivity } from './feedController.js';
 
 // @desc    Get all workouts for user
 // @route   GET /api/workouts
@@ -95,6 +96,25 @@ export const createWorkout = async (req, res, next) => {
     
     // Check and award badges
     const newBadges = await checkAndAwardBadges(req.user._id, workout);
+    
+    // Create activity for social feed
+    const workoutTypeLabels = {
+      run: '🏃 Run',
+      lift: '🏋️ Strength Training',
+      cardio: '❤️ Cardio',
+      biometrics: '📊 Biometrics'
+    };
+    
+    await createActivity(req.user._id, 'workout', {
+      workout: workout._id,
+      title: `Completed a ${workoutTypeLabels[workout.type] || workout.type}`,
+      description: workout.notes || `${workout.duration} minute workout`,
+      metadata: {
+        duration: workout.duration,
+        distance: workout.run?.distance || workout.cardio?.distance,
+        type: workout.type
+      }
+    });
     
     res.status(201).json({
       success: true,
