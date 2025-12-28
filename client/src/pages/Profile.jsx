@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { 
   User,
@@ -18,6 +18,7 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Profile() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState(null);
@@ -175,7 +176,7 @@ export default function Profile() {
           {/* Actions */}
           <div className="flex gap-3">
             {isOwnProfile ? (
-              <Button variant="secondary" icon={Settings}>
+              <Button variant="secondary" icon={Settings} onClick={() => navigate('/dashboard/settings')}>
                 Edit Profile
               </Button>
             ) : (

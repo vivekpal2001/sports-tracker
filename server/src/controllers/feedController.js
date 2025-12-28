@@ -285,6 +285,17 @@ export const commentOnActivity = async (req, res, next) => {
     activity.comments.push(comment);
     await activity.save();
     
+    // Create notification for comment if not own post
+    if (activity.user.toString() !== req.user._id.toString()) {
+      await createNotification(
+        activity.user,
+        req.user._id,
+        'comment',
+        activity._id,
+        null
+      );
+    }
+    
     // Populate the new comment's user info
     await activity.populate('comments.user', 'name avatar');
     

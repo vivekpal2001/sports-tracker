@@ -178,6 +178,18 @@ export const followUser = async (req, res, next) => {
       $addToSet: { followers: req.user._id }
     });
     
+    // Create follow notification
+    try {
+      const Notification = (await import('../models/Notification.js')).default;
+      await Notification.create({
+        recipient: userToFollow._id,
+        sender: req.user._id,
+        type: 'follow'
+      });
+    } catch (notifError) {
+      console.error('Error creating follow notification:', notifError);
+    }
+    
     res.json({
       success: true,
       message: `Now following ${userToFollow.name}`

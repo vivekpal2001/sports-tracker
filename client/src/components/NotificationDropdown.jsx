@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { Bell, Check, CheckCheck, Trash2, Heart, MessageCircle, User } from 'lucide-react';
+import { Bell, CheckCheck, MessageCircle, User, ChevronDown } from 'lucide-react';
 import { notificationAPI } from '../services/api';
 
 export default function NotificationDropdown() {
@@ -9,6 +8,8 @@ export default function NotificationDropdown() {
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
   const dropdownRef = useRef(null);
   
   // Fetch unread count on mount
@@ -38,11 +39,17 @@ export default function NotificationDropdown() {
     }
   };
   
-  const fetchNotifications = async () => {
+  const fetchNotifications = async (pageNum = 1) => {
     setLoading(true);
     try {
-      const response = await notificationAPI.getAll();
-      setNotifications(response.data.data);
+      const response = await notificationAPI.getAll(pageNum);
+      if (pageNum === 1) {
+        setNotifications(response.data.data);
+      } else {
+        setNotifications(prev => [...prev, ...response.data.data]);
+      }
+      setPage(pageNum);
+      setHasMore(response.data.pagination.page < response.data.pagination.pages);
     } catch (error) {
       console.error('Failed to fetch notifications:', error);
     } finally {
@@ -53,8 +60,13 @@ export default function NotificationDropdown() {
   const handleOpen = () => {
     setOpen(!open);
     if (!open) {
-      fetchNotifications();
+      setPage(1);
+      fetchNotifications(1);
     }
+  };
+  
+  const handleLoadMore = () => {
+    fetchNotifications(page + 1);
   };
   
   const handleMarkAllRead = async () => {
@@ -146,49 +158,67 @@ export default function NotificationDropdown() {
               )}
             </div>
             
-            {/* Notifications List */}
-            <div className="max-h-96 overflow-y-auto">
-              {loading ? (
+            {/* Notifications List - scrollable */}
+            <div className="max-h-[60vh] overflow-y-auto">
+              {loading && notifications.length === 0 ? (
                 <div className="p-8 text-center text-gray-400">
                   Loading...
                 </div>
               ) : notifications.length > 0 ? (
-                notifications.map((notification) => (
-                  <div
-                    key={notification._id}
-                    onClick={() => !notification.read && handleMarkRead(notification._id)}
-                    className={`
-                      flex items-start gap-3 p-4 border-b border-white/5 cursor-pointer
-                      hover:bg-white/5 transition-colors
-                      ${!notification.read ? 'bg-primary-500/5' : ''}
-                    `}
-                  >
-                    {/* Icon */}
-                    <div className="w-10 h-10 rounded-full bg-dark-300 flex items-center justify-center flex-shrink-0">
-                      {getNotificationIcon(notification.type, notification.reactionType)}
+                <>
+                  {notifications.map((notification) => (
+                    <div
+                      key={notification._id}
+                      onClick={() => !notification.read && handleMarkRead(notification._id)}
+                      className={`
+                        flex items-start gap-3 p-4 border-b border-white/5 cursor-pointer
+                        hover:bg-white/5 transition-colors
+                        ${!notification.read ? 'bg-primary-500/5' : ''}
+                      `}
+                    >
+                      {/* Icon */}
+                      <div className="w-10 h-10 rounded-full bg-dark-300 flex items-center justify-center flex-shrink-0">
+                        {getNotificationIcon(notification.type, notification.reactionType)}
+                      </div>
+                      
+                      {/* Content */}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm text-white">
+                          {getNotificationText(notification)}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {new Date(notification.createdAt).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })}
+                        </p>
+                      </div>
+                      
+                      {/* Unread indicator */}
+                      {!notification.read && (
+                        <div className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0 mt-2" />
+                      )}
                     </div>
-                    
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm text-white">
-                        {getNotificationText(notification)}
-                      </p>
-                      <p className="text-xs text-gray-500 mt-1">
-                        {new Date(notification.createdAt).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </p>
-                    </div>
-                    
-                    {/* Unread indicator */}
-                    {!notification.read && (
-                      <div className="w-2 h-2 rounded-full bg-primary-500 flex-shrink-0 mt-2" />
-                    )}
-                  </div>
-                ))
+                  ))}
+                  
+                  {/* Load More Button */}
+                  {hasMore && (
+                    <button
+                      onClick={handleLoadMore}
+                      disabled={loading}
+                      className="w-full p-3 text-center text-sm text-primary-500 hover:bg-white/5 border-t border-white/10 flex items-center justify-center gap-2"
+                    >
+                      {loading ? 'Loading...' : (
+                        <>
+                          <ChevronDown className="w-4 h-4" />
+                          Load More
+                        </>
+                      )}
+                    </button>
+                  )}
+                </>
               ) : (
                 <div className="p-8 text-center">
                   <Bell className="w-10 h-10 text-gray-600 mx-auto mb-2" />
@@ -196,20 +226,10 @@ export default function NotificationDropdown() {
                 </div>
               )}
             </div>
-            
-            {/* Footer */}
-            {notifications.length > 0 && (
-              <Link
-                to="/dashboard/notifications"
-                className="block p-3 text-center text-sm text-primary-500 hover:bg-white/5 border-t border-white/10"
-                onClick={() => setOpen(false)}
-              >
-                View All
-              </Link>
-            )}
           </motion.div>
         )}
       </AnimatePresence>
     </div>
   );
 }
+
