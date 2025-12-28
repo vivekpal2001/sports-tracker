@@ -198,7 +198,12 @@ export default function Profile() {
           { icon: TrendingUp, label: 'Workouts', value: profile.stats?.workouts || 0, color: 'primary' },
           { icon: Award, label: 'Badges', value: profile.stats?.badges || 0, color: 'yellow' },
           { icon: Users, label: 'Followers', value: profile.stats?.followers || 0, color: 'purple' },
-          { icon: Calendar, label: 'Member Since', value: new Date(profile.joinedAt).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }), color: 'lime' }
+          { icon: Calendar, label: 'Member Since', value: (() => {
+            const dateStr = profile.joinedAt || profile.createdAt;
+            if (!dateStr) return 'N/A';
+            const date = new Date(dateStr);
+            return isNaN(date.getTime()) ? 'N/A' : date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+          })(), color: 'lime' }
         ].map((stat, i) => (
           <motion.div
             key={i}
