@@ -91,3 +91,22 @@ export const trainingPlanAPI = {
   completeWorkout: (id, data) => api.put(`/training-plans/${id}/workout`, data),
   delete: (id) => api.delete(`/training-plans/${id}`)
 };
+
+export const userAPI = {
+  getMyProfile: () => api.get('/users/me'),
+  updateProfile: (data) => api.put('/users/me', data),
+  getPublicProfile: (id) => api.get(`/users/${id}`),
+  follow: (id) => api.post(`/users/${id}/follow`),
+  unfollow: (id) => api.delete(`/users/${id}/follow`),
+  getFollowers: (id) => api.get(`/users/${id}/followers`),
+  getFollowing: (id) => api.get(`/users/${id}/following`),
+  search: (q) => api.get('/users/search', { params: { q } })
+};
+
+export const feedAPI = {
+  getFeed: (page = 1) => api.get('/feed', { params: { page } }),
+  getUserActivities: (id, page = 1) => api.get(`/feed/user/${id}`, { params: { page } }),
+  like: (id) => api.post(`/feed/${id}/like`),
+  comment: (id, text) => api.post(`/feed/${id}/comment`, { text }),
+  deleteComment: (id, commentId) => api.delete(`/feed/${id}/comment/${commentId}`)
+};

@@ -49,7 +49,25 @@ const userSchema = new mongoose.Schema({
       default: 'metric'
     },
     notifications: { type: Boolean, default: true }
-  }
+  },
+  // Social fields
+  bio: {
+    type: String,
+    maxlength: 160,
+    default: ''
+  },
+  isPublic: {
+    type: Boolean,
+    default: true
+  },
+  followers: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }],
+  following: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }]
 }, {
   timestamps: true
 });

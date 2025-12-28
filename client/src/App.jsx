@@ -16,6 +16,8 @@ import PersonalRecords from './pages/PersonalRecords';
 import Goals from './pages/Goals';
 import Badges from './pages/Badges';
 import TrainingPlan from './pages/TrainingPlan';
+import Feed from './pages/Feed';
+import Profile from './pages/Profile';
 
 // Layout
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -115,6 +117,21 @@ export default function App() {
       <Route path="/dashboard/training-plan" element={
         <ProtectedRoute>
           <TrainingPlan />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/feed" element={
+        <ProtectedRoute>
+          <Feed />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/profile" element={
+        <ProtectedRoute>
+          <Profile />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/profile/:id" element={
+        <ProtectedRoute>
+          <Profile />
         </ProtectedRoute>
       } />
       

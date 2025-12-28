@@ -54,3 +54,30 @@ export const generateToken = (userId) => {
     expiresIn: '30d'
   });
 };
+
+// Optional auth - attaches user if token present, continues anyway
+export const optionalAuth = async (req, res, next) => {
+  try {
+    let token;
+    
+    if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {
+      token = req.headers.authorization.split(' ')[1];
+    }
+    
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const user = await User.findById(decoded.id);
+        if (user) {
+          req.user = user;
+        }
+      } catch (error) {
+        // Token invalid, continue without user
+      }
+    }
+    
+    next();
+  } catch (error) {
+    next();
+  }
+};
