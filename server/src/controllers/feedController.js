@@ -244,11 +244,98 @@ export const createActivity = async (userId, type, data) => {
   }
 };
 
+// @desc    Create a post
+// @route   POST /api/feed/post
+// @access  Private
+export const createPost = async (req, res, next) => {
+  try {
+    const { content, postType, images } = req.body;
+    
+    if (!content || content.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Post content is required'
+      });
+    }
+    
+    // Create title based on post type
+    let title;
+    switch (postType) {
+      case 'motivation':
+        title = '💪 Motivation';
+        break;
+      case 'progress':
+        title = '📈 Progress Update';
+        break;
+      case 'photo':
+        title = '📸 Photo';
+        break;
+      default:
+        title = '💭 Update';
+    }
+    
+    const activity = await Activity.create({
+      user: req.user._id,
+      type: 'post',
+      postType: postType || 'text',
+      title,
+      content: content.trim(),
+      images: images || [],
+      isPublic: true
+    });
+    
+    await activity.populate('user', 'name avatar');
+    
+    res.status(201).json({
+      success: true,
+      data: activity
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete a post
+// @route   DELETE /api/feed/:id
+// @access  Private
+export const deletePost = async (req, res, next) => {
+  try {
+    const activity = await Activity.findById(req.params.id);
+    
+    if (!activity) {
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found'
+      });
+    }
+    
+    // Only post owner can delete
+    if (activity.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to delete this post'
+      });
+    }
+    
+    await activity.deleteOne();
+    
+    res.json({
+      success: true,
+      message: 'Post deleted'
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export default {
   getFeed,
   getUserActivities,
   likeActivity,
   commentOnActivity,
   deleteComment,
-  createActivity
+  createActivity,
+  createPost,
+  deletePost
 };
+

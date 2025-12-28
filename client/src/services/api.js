@@ -108,7 +108,9 @@ export const feedAPI = {
   getUserActivities: (id, page = 1) => api.get(`/feed/user/${id}`, { params: { page } }),
   like: (id) => api.post(`/feed/${id}/like`),
   comment: (id, text) => api.post(`/feed/${id}/comment`, { text }),
-  deleteComment: (id, commentId) => api.delete(`/feed/${id}/comment/${commentId}`)
+  deleteComment: (id, commentId) => api.delete(`/feed/${id}/comment/${commentId}`),
+  createPost: (data) => api.post('/feed/post', data),
+  deletePost: (id) => api.delete(`/feed/${id}`)
 };
 
 export const leaderboardAPI = {

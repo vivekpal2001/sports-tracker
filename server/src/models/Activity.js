@@ -9,8 +9,14 @@ const activitySchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['workout', 'badge', 'goal_completed', 'pr', 'follow', 'milestone'],
+    enum: ['workout', 'badge', 'goal_completed', 'pr', 'follow', 'milestone', 'post'],
     required: true
+  },
+  // Post type for manual posts
+  postType: {
+    type: String,
+    enum: ['text', 'photo', 'workout_share', 'progress', 'motivation'],
+    default: 'text'
   },
   // Reference to related content
   workout: {
@@ -37,7 +43,16 @@ const activitySchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  content: {
+    type: String,
+    maxlength: 2000
+  },
   description: String,
+  // Images for posts
+  images: [{
+    url: String,
+    caption: String
+  }],
   metadata: {
     duration: Number,
     distance: Number,

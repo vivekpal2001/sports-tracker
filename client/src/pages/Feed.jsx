@@ -9,12 +9,25 @@ import {
   Search,
   X,
   Timer,
-  MapPin
+  MapPin,
+  Plus,
+  Image,
+  Sparkles,
+  Trash2
 } from 'lucide-react';
 import { Card, Button, LoadingSpinner } from '../components/ui';
 import { feedAPI, userAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+
+const POST_TYPES = [
+  { value: 'text', label: '💭 Update', description: 'Share your thoughts' },
+  { value: 'motivation', label: '💪 Motivation', description: 'Inspire others' },
+  { value: 'progress', label: '📈 Progress', description: 'Show your gains' },
+  { value: 'photo', label: '📸 Photo', description: 'Share a pic' }
+];
 
 export default function Feed() {
+  const { user: currentUser } = useAuth();
   const [loading, setLoading] = useState(true);
   const [activities, setActivities] = useState([]);
   const [page, setPage] = useState(1);
@@ -22,7 +35,16 @@ export default function Feed() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
+  const [showCreatePost, setShowCreatePost] = useState(false);
   const [commentText, setCommentText] = useState({});
+  
+  // Create post state
+  const [newPost, setNewPost] = useState({
+    content: '',
+    postType: 'text',
+    images: []
+  });
+  const [posting, setPosting] = useState(false);
   
   useEffect(() => {
     fetchFeed();
@@ -42,6 +64,39 @@ export default function Feed() {
       console.error('Failed to fetch feed:', error);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  const handleCreatePost = async () => {
+    if (!newPost.content.trim()) return;
+    
+    setPosting(true);
+    try {
+      const response = await feedAPI.createPost({
+        content: newPost.content,
+        postType: newPost.postType,
+        images: newPost.images
+      });
+      
+      // Add new post to top of feed
+      setActivities(prev => [response.data.data, ...prev]);
+      setShowCreatePost(false);
+      setNewPost({ content: '', postType: 'text', images: [] });
+    } catch (error) {
+      console.error('Failed to create post:', error);
+    } finally {
+      setPosting(false);
+    }
+  };
+  
+  const handleDeletePost = async (activityId) => {
+    if (!confirm('Delete this post?')) return;
+    
+    try {
+      await feedAPI.deletePost(activityId);
+      setActivities(prev => prev.filter(a => a._id !== activityId));
+    } catch (error) {
+      console.error('Failed to delete post:', error);
     }
   };
   
@@ -116,17 +171,133 @@ export default function Feed() {
             <Users className="w-8 h-8 text-primary-500" />
             Activity Feed
           </h1>
-          <p className="text-gray-400">See what your friends are up to</p>
+          <p className="text-gray-400">Share updates and connect with athletes</p>
         </div>
         
-        <Button 
-          variant="secondary" 
-          icon={Search}
-          onClick={() => setShowSearch(!showSearch)}
-        >
-          Find Friends
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            icon={Plus}
+            onClick={() => setShowCreatePost(true)}
+          >
+            Post
+          </Button>
+          <Button 
+            variant="secondary" 
+            icon={Search}
+            onClick={() => setShowSearch(!showSearch)}
+          >
+            Find
+          </Button>
+        </div>
       </div>
+      
+      {/* Create Post Modal */}
+      <AnimatePresence>
+        {showCreatePost && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-2 sm:p-4"
+            onClick={() => setShowCreatePost(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-dark-300 rounded-2xl w-full max-w-lg border border-white/10 max-h-[90vh] overflow-hidden flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-4 sm:p-6 border-b border-white/10 flex-shrink-0">
+                <h2 className="text-lg sm:text-xl font-bold text-white">Create Post</h2>
+                <button
+                  onClick={() => setShowCreatePost(false)}
+                  className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {/* Content */}
+              <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-4">
+                {/* Post Type Selector */}
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">Post Type</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {POST_TYPES.map(type => (
+                      <button
+                        key={type.value}
+                        onClick={() => setNewPost(prev => ({ ...prev, postType: type.value }))}
+                        className={`
+                          p-3 rounded-xl text-left transition-all border-2
+                          ${newPost.postType === type.value 
+                            ? 'border-primary-500 bg-primary-500/10' 
+                            : 'border-transparent bg-dark-200/50 hover:bg-dark-200'}
+                        `}
+                      >
+                        <span className="font-medium text-white text-sm">{type.label}</span>
+                        <p className="text-xs text-gray-400">{type.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                
+                {/* Content Input */}
+                <div>
+                  <label className="text-sm text-gray-400 mb-2 block">What's on your mind?</label>
+                  <textarea
+                    value={newPost.content}
+                    onChange={(e) => setNewPost(prev => ({ ...prev, content: e.target.value }))}
+                    placeholder="Share your thoughts, progress, or motivation..."
+                    rows={4}
+                    maxLength={2000}
+                    className="w-full bg-dark-200/50 border border-white/10 rounded-xl px-4 py-3 text-white placeholder-gray-500 focus:border-primary-500 focus:ring-1 focus:ring-primary-500 resize-none"
+                  />
+                  <p className="text-xs text-gray-500 mt-1 text-right">{newPost.content.length}/2000</p>
+                </div>
+                
+                {/* Image placeholder - could add upload later */}
+                {newPost.postType === 'photo' && (
+                  <div className="border-2 border-dashed border-white/10 rounded-xl p-8 text-center">
+                    <Image className="w-8 h-8 text-gray-500 mx-auto mb-2" />
+                    <p className="text-sm text-gray-400">Image upload coming soon!</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Footer */}
+              <div className="p-4 sm:p-6 border-t border-white/10 flex-shrink-0">
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowCreatePost(false)}
+                    className="flex-1 py-3 bg-dark-200 hover:bg-dark-100 text-white rounded-xl transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleCreatePost}
+                    disabled={!newPost.content.trim() || posting}
+                    className="flex-1 py-3 bg-primary-500 hover:bg-primary-400 text-dark-500 font-medium rounded-xl transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {posting ? (
+                      <>
+                        <Sparkles className="w-4 h-4 animate-pulse" />
+                        Posting...
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        Post
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
       
       {/* Search Modal */}
       <AnimatePresence>
@@ -214,23 +385,47 @@ export default function Feed() {
                         })}
                       </p>
                     </div>
-                    <span className={`
-                      px-3 py-1 rounded-full text-xs font-medium
-                      ${activity.type === 'workout' ? 'bg-primary-500/20 text-primary-500' :
-                        activity.type === 'badge' ? 'bg-yellow-500/20 text-yellow-500' :
-                        activity.type === 'pr' ? 'bg-lime-500/20 text-lime-500' :
-                        activity.type === 'goal_completed' ? 'bg-purple-500/20 text-purple-500' :
-                        'bg-gray-500/20 text-gray-400'}
-                    `}>
-                      {activity.type.replace('_', ' ')}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className={`
+                        px-3 py-1 rounded-full text-xs font-medium
+                        ${activity.type === 'workout' ? 'bg-primary-500/20 text-primary-500' :
+                          activity.type === 'badge' ? 'bg-yellow-500/20 text-yellow-500' :
+                          activity.type === 'pr' ? 'bg-lime-500/20 text-lime-500' :
+                          activity.type === 'goal_completed' ? 'bg-purple-500/20 text-purple-500' :
+                          activity.type === 'post' ? 'bg-blue-500/20 text-blue-400' :
+                          'bg-gray-500/20 text-gray-400'}
+                      `}>
+                        {activity.type === 'post' ? activity.postType?.replace('_', ' ') : activity.type.replace('_', ' ')}
+                      </span>
+                      {/* Delete button for own posts */}
+                      {activity.user?._id === currentUser?._id && activity.type === 'post' && (
+                        <button
+                          onClick={() => handleDeletePost(activity._id)}
+                          className="p-1.5 rounded-lg hover:bg-white/10 text-gray-400 hover:text-crimson-500"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                   
                   {/* Activity Content */}
                   <div className="mb-4">
                     <h3 className="text-lg font-semibold text-white mb-1">{activity.title}</h3>
-                    {activity.description && (
+                    {activity.content && (
+                      <p className="text-gray-300 whitespace-pre-wrap">{activity.content}</p>
+                    )}
+                    {!activity.content && activity.description && (
                       <p className="text-gray-400">{activity.description}</p>
+                    )}
+                    
+                    {/* Images */}
+                    {activity.images && activity.images.length > 0 && (
+                      <div className="mt-3 rounded-xl overflow-hidden">
+                        {activity.images.map((img, i) => (
+                          <img key={i} src={img.url} alt={img.caption || 'Post image'} className="w-full" />
+                        ))}
+                      </div>
                     )}
                     
                     {/* Workout metadata */}
@@ -312,11 +507,16 @@ export default function Feed() {
               <Users className="w-16 h-16 text-gray-600 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-white mb-2">No Activities Yet</h3>
               <p className="text-gray-400 mb-6">
-                Follow other athletes to see their activities here!
+                Be the first to post or follow other athletes!
               </p>
-              <Button icon={Search} onClick={() => setShowSearch(true)}>
-                Find Friends
-              </Button>
+              <div className="flex justify-center gap-3">
+                <Button icon={Plus} onClick={() => setShowCreatePost(true)}>
+                  Create Post
+                </Button>
+                <Button variant="secondary" icon={Search} onClick={() => setShowSearch(true)}>
+                  Find Friends
+                </Button>
+              </div>
             </Card>
           )}
         </AnimatePresence>
