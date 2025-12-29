@@ -34,12 +34,11 @@ export default function CalendarHeatmap() {
       });
       
       // Convert heatmap data to a day lookup
-      // Use UTC date to avoid timezone shifting (workout on 27th showing as 26th)
+      // Parse day directly from date string (YYYY-MM-DD) to avoid timezone issues
       const dayData = {};
       (res.data.data.daily || []).forEach(d => {
-        // Parse the date and use UTC date to prevent timezone issues
-        const date = new Date(d.date);
-        const day = date.getUTCDate();
+        // d.date is in format "YYYY-MM-DD", extract day directly
+        const day = parseInt(d.date.split('-')[2], 10);
         dayData[day] = {
           workouts: d.workouts || 0,
           duration: d.duration || 0,

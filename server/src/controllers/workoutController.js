@@ -398,6 +398,10 @@ export const getChartData = async (req, res, next) => {
   try {
     const { period = 'week', year, month } = req.query;
     
+    // User's timezone offset - IST is +05:30 = 330 minutes
+    // We'll use this to adjust date extraction in MongoDB
+    const timezoneOffset = '+05:30';
+    
     const now = new Date();
     let startDate, endDate;
     
@@ -418,12 +422,12 @@ export const getChartData = async (req, res, next) => {
       startDate = new Date('2000-01-01');
       endDate = now;
     } else if (period === 'custom' && year && month) {
-      // For heatmap calendar view
-      startDate = new Date(parseInt(year), parseInt(month) - 1, 1);
-      endDate = new Date(parseInt(year), parseInt(month), 0); // Last day of month
+      // For heatmap calendar view - use UTC dates to avoid timezone issues
+      startDate = new Date(Date.UTC(parseInt(year), parseInt(month) - 1, 1));
+      endDate = new Date(Date.UTC(parseInt(year), parseInt(month), 0, 23, 59, 59)); // Last day of month
     }
     
-    // Get daily aggregated data
+    // Get daily aggregated data with timezone-aware date extraction
     const dailyData = await Workout.aggregate([
       {
         $match: {
@@ -435,9 +439,10 @@ export const getChartData = async (req, res, next) => {
       {
         $group: {
           _id: {
-            year: { $year: '$date' },
-            month: { $month: '$date' },
-            day: { $dayOfMonth: '$date' }
+            // Use timezone-aware date extraction for IST (+05:30)
+            year: { $year: { date: '$date', timezone: timezoneOffset } },
+            month: { $month: { date: '$date', timezone: timezoneOffset } },
+            day: { $dayOfMonth: { date: '$date', timezone: timezoneOffset } }
           },
           totalDuration: { $sum: '$duration' },
           workoutCount: { $sum: 1 },
@@ -457,9 +462,9 @@ export const getChartData = async (req, res, next) => {
       { $sort: { '_id.year': 1, '_id.month': 1, '_id.day': 1 } }
     ]);
     
-    // Format for frontend charts
+    // Format for frontend charts - use the extracted day directly
     const chartData = dailyData.map(d => ({
-      date: new Date(d._id.year, d._id.month - 1, d._id.day).toISOString().split('T')[0],
+      date: `${d._id.year}-${String(d._id.month).padStart(2, '0')}-${String(d._id.day).padStart(2, '0')}`,
       duration: d.totalDuration || 0,
       workouts: d.workoutCount,
       distance: d.totalDistance || 0,
