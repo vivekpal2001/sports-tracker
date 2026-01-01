@@ -132,7 +132,9 @@ const workoutSchema = new mongoose.Schema({
       name: String
     },
     breathwork: {
-      type: String,  // Pranayama type
+      type: {
+        type: String  // Pranayama type (e.g., Ujjayi, Kapalabhati)
+      },
       duration: Number  // minutes
     },
     meditation: {

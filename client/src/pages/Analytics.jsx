@@ -299,7 +299,7 @@ function generateActivityData(workouts, period = 'week') {
         return (d === 0 ? 7 : d) === day;
       });
       const totalDuration = dayWorkouts.reduce((sum, w) => sum + (w.duration || 0), 0);
-      return { x: day, y: totalDuration || Math.floor(Math.random() * 30) + 10 };
+      return { x: day, y: totalDuration };
     });
   } else if (period === 'month') {
     // Generate 30 days of data
@@ -307,7 +307,7 @@ function generateActivityData(workouts, period = 'week') {
     return days.map(day => {
       const dayWorkouts = workouts.filter(w => new Date(w.date).getDate() === day);
       const totalDuration = dayWorkouts.reduce((sum, w) => sum + (w.duration || 0), 0);
-      return { x: day, y: totalDuration || Math.floor(Math.random() * 20) + 5 };
+      return { x: day, y: totalDuration };
     });
   } else {
     // Year - show monthly totals
@@ -315,13 +315,13 @@ function generateActivityData(workouts, period = 'week') {
     return months.map(month => {
       const monthWorkouts = workouts.filter(w => new Date(w.date).getMonth() + 1 === month);
       const totalDuration = monthWorkouts.reduce((sum, w) => sum + (w.duration || 0), 0);
-      return { x: month, y: totalDuration || Math.floor(Math.random() * 100) + 50 };
+      return { x: month, y: totalDuration };
     });
   }
 }
 
 function getTypeDistribution(byType) {
-  const typeLabels = { run: 'Run', lift: 'Lift', cardio: 'Cardio', biometrics: 'Bio' };
+  const typeLabels = { run: 'Run', lift: 'Lift', cardio: 'Cardio', yoga: 'Yoga', biometrics: 'Bio' };
   const distribution = byType
     .filter(t => t._id !== 'biometrics')
     .map(t => ({
@@ -329,30 +329,28 @@ function getTypeDistribution(byType) {
       y: t.count
     }));
   
+  // Return empty placeholder if no data
   if (distribution.length === 0) {
-    return [
-      { x: 'Run', y: 4 },
-      { x: 'Lift', y: 3 },
-      { x: 'Cardio', y: 2 }
-    ];
+    return [{ x: 'No Data', y: 1 }];
   }
   
   return distribution;
 }
 
 function generateWeeklyTrend() {
+  // Return empty data - actual trend should be computed from real workouts
   return {
     duration: [
-      { x: 1, y: 180 },
-      { x: 2, y: 220 },
-      { x: 3, y: 190 },
-      { x: 4, y: 250 }
+      { x: 1, y: 0 },
+      { x: 2, y: 0 },
+      { x: 3, y: 0 },
+      { x: 4, y: 0 }
     ],
     intensity: [
-      { x: 1, y: 65 },
-      { x: 2, y: 72 },
-      { x: 3, y: 68 },
-      { x: 4, y: 78 }
+      { x: 1, y: 0 },
+      { x: 2, y: 0 },
+      { x: 3, y: 0 },
+      { x: 4, y: 0 }
     ]
   };
 }

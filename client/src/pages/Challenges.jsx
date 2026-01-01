@@ -15,7 +15,8 @@ import {
   Search,
   Crown,
   Medal,
-  Award
+  Award,
+  Pencil
 } from 'lucide-react';
 import { Button, Card, Input } from '../components/ui';
 
@@ -45,6 +46,7 @@ export default function Challenges() {
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [selectedChallenge, setSelectedChallenge] = useState(null);
+  const [editingChallenge, setEditingChallenge] = useState(null);
   
   const tabs = [
     { id: 'active', name: 'Active', icon: TrendingUp },
@@ -213,6 +215,24 @@ export default function Challenges() {
             challenge={selectedChallenge}
             onClose={() => setSelectedChallenge(null)}
             onJoin={handleJoinChallenge}
+            onEdit={(challenge) => {
+              setSelectedChallenge(null);
+              setEditingChallenge(challenge);
+            }}
+          />
+        )}
+      </AnimatePresence>
+      
+      {/* Edit Challenge Modal */}
+      <AnimatePresence>
+        {editingChallenge && (
+          <EditChallengeModal
+            challenge={editingChallenge}
+            onClose={() => setEditingChallenge(null)}
+            onSuccess={() => {
+              setEditingChallenge(null);
+              fetchChallenges();
+            }}
           />
         )}
       </AnimatePresence>
@@ -223,9 +243,9 @@ export default function Challenges() {
 // Challenge Card Component
 function ChallengeCard({ challenge, onJoin, onClick, isDiscover }) {
   const typeConfig = CHALLENGE_TYPES[challenge.type];
-  const progressPercent = challenge.participants?.[0]?.progress
-    ? Math.min(100, Math.round((challenge.participants[0].progress / challenge.target) * 100))
-    : 0;
+  // Use userProgressPercent from API if available, fallback to calculation
+  const progressPercent = challenge.userProgressPercent ?? 0;
+  const userProgress = challenge.userProgress ?? 0;
   
   const daysRemaining = Math.max(0, Math.ceil(
     (new Date(challenge.endDate) - new Date()) / (1000 * 60 * 60 * 24)
@@ -493,10 +513,11 @@ function CreateChallengeModal({ onClose, onSuccess }) {
 }
 
 // Challenge Detail Modal
-function ChallengeDetailModal({ challenge, onClose, onJoin }) {
+function ChallengeDetailModal({ challenge, onClose, onJoin, onEdit }) {
   const [leaderboard, setLeaderboard] = useState([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState(false);
+  const isCreator = challenge.creator?._id === JSON.parse(atob(localStorage.getItem('token')?.split('.')[1] || 'e30='))?.id;
   
   const typeConfig = CHALLENGE_TYPES[challenge.type];
   
@@ -526,6 +547,19 @@ function ChallengeDetailModal({ challenge, onClose, onJoin }) {
       navigator.clipboard.writeText(challenge.inviteCode);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
+    }
+  };
+  
+  const syncProgress = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      await fetch(`${API_URL}/api/challenges/${challenge._id}/sync`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      fetchLeaderboard();
+    } catch (error) {
+      console.error('Error syncing progress:', error);
     }
   };
   
@@ -561,9 +595,20 @@ function ChallengeDetailModal({ challenge, onClose, onJoin }) {
               <h2 className="text-2xl font-bold text-white">{challenge.title}</h2>
               <p className="text-gray-400 mt-1">{challenge.description}</p>
             </div>
-            <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg">
-              <X className="w-5 h-5 text-gray-400" />
-            </button>
+            <div className="flex items-center gap-2">
+              {isCreator && (
+                <button 
+                  onClick={() => onEdit(challenge)} 
+                  className="p-2 hover:bg-white/5 rounded-lg"
+                  title="Edit Challenge"
+                >
+                  <Pencil className="w-5 h-5 text-primary-400" />
+                </button>
+              )}
+              <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg">
+                <X className="w-5 h-5 text-gray-400" />
+              </button>
+            </div>
           </div>
         </div>
         
@@ -602,10 +647,15 @@ function ChallengeDetailModal({ challenge, onClose, onJoin }) {
         
         {/* Leaderboard */}
         <div className="p-6">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Trophy className="w-5 h-5 text-primary-500" />
-            Leaderboard
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-primary-500" />
+              Leaderboard
+            </h3>
+            <Button size="sm" variant="ghost" onClick={syncProgress}>
+              Sync Progress
+            </Button>
+          </div>
           
           {loading ? (
             <div className="space-y-3">
@@ -651,6 +701,134 @@ function ChallengeDetailModal({ challenge, onClose, onJoin }) {
             </div>
           )}
         </div>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+// Edit Challenge Modal
+function EditChallengeModal({ challenge, onClose, onSuccess }) {
+  const [loading, setLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    title: challenge.title || '',
+    description: challenge.description || '',
+    target: challenge.target || '',
+    startDate: challenge.startDate?.split('T')[0] || '',
+    endDate: challenge.endDate?.split('T')[0] || '',
+    visibility: challenge.visibility || 'public'
+  });
+  
+  const typeConfig = CHALLENGE_TYPES[challenge.type];
+  
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    
+    try {
+      const token = localStorage.getItem('token');
+      
+      const res = await fetch(`${API_URL}/api/challenges/${challenge._id}`, {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          ...formData,
+          target: parseInt(formData.target),
+          unit: challenge.unit
+        })
+      });
+      
+      const data = await res.json();
+      if (data.success) {
+        onSuccess();
+      }
+    } catch (error) {
+      console.error('Error updating challenge:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ scale: 0.9, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.9, opacity: 0 }}
+        className="bg-dark-100 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="p-6 border-b border-white/10">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold text-white">Edit Challenge</h2>
+            <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-lg">
+              <X className="w-5 h-5 text-gray-400" />
+            </button>
+          </div>
+        </div>
+        
+        <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          <Input
+            label="Challenge Title"
+            value={formData.title}
+            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+            required
+          />
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-300 mb-2">Description</label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              rows={3}
+              className="w-full px-4 py-3 rounded-xl bg-dark-200/50 border border-white/10 text-white"
+            />
+          </div>
+          
+          <div className="p-4 bg-dark-200/30 rounded-xl">
+            <p className="text-sm text-gray-400 mb-2">Challenge Type</p>
+            <div className="flex items-center gap-3">
+              <span className="text-2xl">{typeConfig.icon}</span>
+              <span className="text-white font-medium">{typeConfig.name}</span>
+            </div>
+          </div>
+          
+          <Input
+            label={`Target (${challenge.unit})`}
+            type="number"
+            value={formData.target}
+            onChange={(e) => setFormData({ ...formData, target: e.target.value })}
+            required
+          />
+          
+          <div className="grid grid-cols-2 gap-4">
+            <Input
+              label="Start Date"
+              type="date"
+              value={formData.startDate}
+              onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
+            />
+            <Input
+              label="End Date"
+              type="date"
+              value={formData.endDate}
+              onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+            />
+          </div>
+          
+          <div className="flex gap-3 pt-4">
+            <Button variant="ghost" onClick={onClose} fullWidth>Cancel</Button>
+            <Button type="submit" loading={loading} fullWidth>Save Changes</Button>
+          </div>
+        </form>
       </motion.div>
     </motion.div>
   );

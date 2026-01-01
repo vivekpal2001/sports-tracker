@@ -312,58 +312,78 @@ export const generatePersonalizedPlan = async (userId, planConfig, workoutHistor
     // Prepare workout history summary
     const historySummary = prepareHistoryForPlan(workoutHistory);
     
-    const prompt = `You are an elite sports coach creating a personalized ${duration}-week training plan.
+    const prompt = `You are an elite certified sports coach creating a detailed, followable ${duration}-week training plan. Athletes will use this as their DAILY guide.
 
 ATHLETE PROFILE:
 - Plan Type: ${type} (${getPlanDescription(type)})
 - Experience Level: ${difficulty}
-- Goal: ${goal || `Complete ${type} training`}
+- Goal: ${goal || `Complete ${type} training successfully`}
 - Recovery Score: ${recoveryScore || 75}/100
 
-RECENT TRAINING HISTORY (Last 60 days):
+RECENT TRAINING HISTORY:
 ${JSON.stringify(historySummary, null, 2)}
 
-Generate a detailed ${duration}-week training plan. For each week, provide 7 days of workouts.
+Create a DETAILED ${duration}-week training plan. Each workout should be so specific that an athlete can follow it without any additional guidance.
 
-IMPORTANT RULES:
-1. If recovery score < 50, reduce intensity and add more rest days
-2. Base workout difficulty on their actual training history
-3. Progressive overload - each week should build on the previous
-4. Include 1 rest day minimum per week
-5. For running plans: include easy runs, tempo runs, intervals, and long runs
-6. For strength plans: include upper body, lower body, and full body days
+CRITICAL REQUIREMENTS:
+1. Each workout must have: warm-up routine, main workout with specific sets/reps/pace, cool-down
+2. Include exact paces, heart rate zones, weights guidance (based on % of max or RPE)
+3. Progressive overload - each week should build on the previous logically
+4. For running: specify pace zones (easy = Zone 2, tempo = Zone 4, etc.)
+5. For strength: include exercise names, sets, reps, rest periods
+6. Include "coachingNotes" with technique tips and what to focus on
+7. If recovery score < 50, reduce intensity significantly
 
-Output ONLY valid JSON in this exact format:
+Output ONLY valid JSON:
 {
-  "planName": "<personalized plan name>",
-  "weeklyOverview": "<2 sentence overview of the plan structure>",
+  "planName": "<personalized descriptive plan name>",
+  "weeklyOverview": "<3-4 sentence overview of plan philosophy and progression>",
   "weeks": [
     {
       "weekNumber": 1,
-      "theme": "<Build Base|Speed Work|Peak|Taper|Recovery>",
+      "theme": "<Build Base|Speed Development|Strength Phase|Peak|Taper|Recovery Week>",
+      "focus": "<1 sentence week focus>",
       "totalDistance": <km for running plans, 0 for strength>,
+      "weeklyTips": "<specific tip for this week>",
       "workouts": [
         {
           "day": 0,
           "dayName": "Sunday",
-          "type": "<run|lift|cardio|cross-training|rest>",
-          "name": "<workout name>",
-          "description": "<1-2 sentence description>",
-          "duration": <minutes>,
+          "type": "<run|lift|cardio|cross-training|yoga|rest>",
+          "name": "<specific workout name e.g., 'Long Aerobic Run' or 'Upper Body Push Day'>",
+          "duration": <total minutes>,
           "distance": <km if applicable, null otherwise>,
-          "intensity": "<easy|moderate|hard>"
+          "intensity": "<easy|moderate|hard|very_hard>",
+          "targetHeartRate": "<Zone 1-5 or BPM range if applicable>",
+          "warmUp": "<specific 5-10 min warm-up routine>",
+          "mainWorkout": "<DETAILED workout - for runs: pace/zones, for lifts: exercises with sets/reps>",
+          "coolDown": "<specific cool-down routine>",
+          "coachingNotes": "<technique tips, what to focus on, common mistakes to avoid>",
+          "equipmentNeeded": "<any equipment needed>"
         }
       ]
     }
   ],
-  "tips": ["<tip 1>", "<tip 2>", "<tip 3>"]
-}`;
+  "tips": [
+    "<actionable training tip>",
+    "<nutrition/recovery tip>",
+    "<mindset/motivation tip>",
+    "<injury prevention tip>"
+  ],
+  "nutritionGuidance": "<brief daily nutrition advice for this plan type>",
+  "recoveryProtocol": "<recommended recovery activities between sessions>"
+}
+
+EXAMPLE WORKOUT DETAIL:
+"mainWorkout": "4x800m intervals at 5K race pace (approx 4:30-4:45/km). Take 2 min easy jog recovery between each interval. Focus on consistent pacing - first 400m should feel controlled, second 400m push to finish strong."
+
+Be specific, prescriptive, and actionable. Reference athlete's history when setting paces/weights.`;
 
     const completion = await groq.chat.completions.create({
       messages: [{ role: 'user', content: prompt }],
       model: MODEL,
       temperature: 0.7,
-      max_tokens: 4000,
+      max_tokens: 8000,
       response_format: { type: 'json_object' }
     });
     
@@ -496,27 +516,134 @@ function generateRunningWeek(weekNumber, totalWeeks, multiplier) {
   const baseDistance = (15 + weekNumber * 2) * multiplier;
   
   return [
-    { day: 0, dayName: 'Sunday', type: 'rest', name: 'Rest Day', description: 'Full rest or light stretching', duration: 0, distance: null, intensity: 'easy' },
-    { day: 1, dayName: 'Monday', type: 'run', name: 'Easy Run', description: 'Conversational pace', duration: Math.round(30 * multiplier), distance: Math.round(baseDistance * 0.15 * 10) / 10, intensity: 'easy' },
-    { day: 2, dayName: 'Tuesday', type: 'cross-training', name: 'Cross Training', description: 'Cycling, swimming, or strength', duration: 40, distance: null, intensity: 'moderate' },
-    { day: 3, dayName: 'Wednesday', type: 'run', name: 'Tempo Run', description: 'Comfortably hard pace', duration: Math.round(35 * multiplier), distance: Math.round(baseDistance * 0.2 * 10) / 10, intensity: 'hard' },
-    { day: 4, dayName: 'Thursday', type: 'run', name: 'Easy Run', description: 'Recovery pace', duration: Math.round(25 * multiplier), distance: Math.round(baseDistance * 0.12 * 10) / 10, intensity: 'easy' },
-    { day: 5, dayName: 'Friday', type: 'lift', name: 'Strength', description: 'Lower body and core focus', duration: 40, distance: null, intensity: 'moderate' },
-    { day: 6, dayName: 'Saturday', type: 'run', name: 'Long Run', description: 'Build endurance at easy pace', duration: Math.round(60 * multiplier), distance: Math.round(baseDistance * 0.35 * 10) / 10, intensity: 'moderate' }
+    { 
+      day: 0, dayName: 'Sunday', type: 'rest', name: 'Complete Rest', 
+      duration: 0, distance: null, intensity: 'easy',
+      warmUp: 'None required',
+      mainWorkout: 'Take the day completely off. Focus on sleep, nutrition, and mental recovery.',
+      coolDown: 'Optional: 10 min gentle stretching or foam rolling',
+      coachingNotes: 'Rest days are when your body adapts and gets stronger. Resist the urge to do "just a little" workout.'
+    },
+    { 
+      day: 1, dayName: 'Monday', type: 'run', name: 'Easy Aerobic Run', 
+      duration: Math.round(30 * multiplier), distance: Math.round(baseDistance * 0.15 * 10) / 10, intensity: 'easy',
+      targetHeartRate: 'Zone 2 (60-70% max HR)',
+      warmUp: '5 min brisk walk, then 10 leg swings each leg, 10 arm circles',
+      mainWorkout: `Run ${Math.round(baseDistance * 0.15 * 10) / 10}km at conversational pace. You should be able to speak full sentences. If breathing hard, slow down.`,
+      coolDown: '5 min easy walk, then 5 min static stretching (quads, hamstrings, calves)',
+      coachingNotes: 'Easy runs build aerobic base. Keep heart rate low - most runners go too fast on easy days.'
+    },
+    { 
+      day: 2, dayName: 'Tuesday', type: 'cross-training', name: 'Cross Training', 
+      duration: 40, distance: null, intensity: 'moderate',
+      warmUp: '5 min light cardio (walking, cycling)',
+      mainWorkout: 'Choose one: 30 min cycling at moderate effort, swimming laps for 20 min, or yoga flow class. Keep intensity conversational.',
+      coolDown: '5 min stretching focusing on hips and shoulders',
+      coachingNotes: 'Cross training reduces injury risk while maintaining fitness. Choose activities you enjoy!'
+    },
+    { 
+      day: 3, dayName: 'Wednesday', type: 'run', name: 'Tempo Run', 
+      duration: Math.round(35 * multiplier), distance: Math.round(baseDistance * 0.2 * 10) / 10, intensity: 'hard',
+      targetHeartRate: 'Zone 4 (80-90% max HR)',
+      warmUp: '10 min easy jog, dynamic stretches (high knees, butt kicks, leg swings)',
+      mainWorkout: `15-20 min at tempo pace (comfortably hard - you can speak 3-4 words at a time). Target pace: ${Math.round((6 - multiplier * 0.5) * 10) / 10} min/km. Stay relaxed, shoulders down.`,
+      coolDown: '10 min easy jog, then thorough stretching',
+      coachingNotes: 'Tempo runs improve lactate threshold. Start conservatively - it should feel "comfortably uncomfortable".'
+    },
+    { 
+      day: 4, dayName: 'Thursday', type: 'run', name: 'Recovery Run', 
+      duration: Math.round(25 * multiplier), distance: Math.round(baseDistance * 0.12 * 10) / 10, intensity: 'easy',
+      targetHeartRate: 'Zone 1-2 (under 65% max HR)',
+      warmUp: '3 min walk to loosen up',
+      mainWorkout: `Very easy ${Math.round(baseDistance * 0.12 * 10) / 10}km. This should feel almost too slow. Focus on smooth, relaxed form.`,
+      coolDown: '5 min walk, foam rolling quads and calves',
+      coachingNotes: 'Recovery runs promote blood flow for healing. If legs feel heavy, walk more or skip entirely.'
+    },
+    { 
+      day: 5, dayName: 'Friday', type: 'lift', name: 'Runner Strength', 
+      duration: 40, distance: null, intensity: 'moderate',
+      warmUp: '5 min light cardio, 10 bodyweight squats, 10 walking lunges',
+      mainWorkout: '3x12 Goblet Squats, 3x10 Romanian Deadlifts, 3x12 each leg Step-ups, 3x15 Calf Raises, 3x30sec Planks, 3x12 Dead Bugs. Rest 60-90 sec between sets.',
+      coolDown: '5 min stretching - hip flexors, hamstrings, glutes',
+      coachingNotes: 'Strength training prevents injuries and improves running economy. Focus on controlled movements, not heavy weights.',
+      equipmentNeeded: 'Dumbbells or kettlebell, step/box'
+    },
+    { 
+      day: 6, dayName: 'Saturday', type: 'run', name: 'Long Run', 
+      duration: Math.round(60 * multiplier), distance: Math.round(baseDistance * 0.35 * 10) / 10, intensity: 'moderate',
+      targetHeartRate: 'Zone 2-3 (65-75% max HR)',
+      warmUp: '10 min easy walk/jog, dynamic stretches',
+      mainWorkout: `${Math.round(baseDistance * 0.35 * 10) / 10}km at easy-to-moderate pace. Start slower than you think. Practice fueling if over 60 min (water, gels). Last 10 min can be slightly faster if feeling good.`,
+      coolDown: '10 min walk, thorough stretching (10+ min), consider ice bath or cold shower for legs',
+      coachingNotes: 'Long runs build endurance and mental toughness. Hydrate well the day before. Eat a familiar breakfast 2-3 hours before.',
+      equipmentNeeded: 'Water bottle or hydration pack for runs over 60 min'
+    }
   ];
 }
 
 function generateStrengthWeek(multiplier) {
   return [
-    { day: 0, dayName: 'Sunday', type: 'rest', name: 'Rest Day', description: 'Complete rest', duration: 0, distance: null, intensity: 'easy' },
-    { day: 1, dayName: 'Monday', type: 'lift', name: 'Upper Body Push', description: 'Chest, shoulders, triceps', duration: Math.round(45 * multiplier), distance: null, intensity: 'hard' },
-    { day: 2, dayName: 'Tuesday', type: 'cardio', name: 'Cardio', description: 'Light cardio for recovery', duration: 30, distance: null, intensity: 'easy' },
-    { day: 3, dayName: 'Wednesday', type: 'lift', name: 'Lower Body', description: 'Squats, deadlifts, leg press', duration: Math.round(50 * multiplier), distance: null, intensity: 'hard' },
-    { day: 4, dayName: 'Thursday', type: 'rest', name: 'Active Recovery', description: 'Stretching and mobility', duration: 20, distance: null, intensity: 'easy' },
-    { day: 5, dayName: 'Friday', type: 'lift', name: 'Upper Body Pull', description: 'Back, biceps, rear delts', duration: Math.round(45 * multiplier), distance: null, intensity: 'hard' },
-    { day: 6, dayName: 'Saturday', type: 'lift', name: 'Full Body', description: 'Compound movements', duration: Math.round(40 * multiplier), distance: null, intensity: 'moderate' }
+    { 
+      day: 0, dayName: 'Sunday', type: 'rest', name: 'Active Recovery', 
+      duration: 30, distance: null, intensity: 'easy',
+      warmUp: 'None required',
+      mainWorkout: '20-30 min light activity: walking, gentle yoga, or swimming. Focus on mobility work - 5 min foam rolling major muscle groups.',
+      coolDown: '10 min stretching routine',
+      coachingNotes: 'Active recovery promotes blood flow and reduces soreness. Keep it truly light - this is not a workout day.'
+    },
+    { 
+      day: 1, dayName: 'Monday', type: 'lift', name: 'Push Day (Chest/Shoulders/Triceps)', 
+      duration: Math.round(50 * multiplier), distance: null, intensity: 'hard',
+      warmUp: '5 min cardio, arm circles, band pull-aparts, 2 sets light bench press',
+      mainWorkout: 'Bench Press 4x8, Overhead Press 3x10, Incline DB Press 3x12, Lateral Raises 3x15, Tricep Pushdowns 3x12, Dips 3x8-12. Rest 90-120 sec between compound lifts, 60 sec for isolation.',
+      coolDown: '5 min stretching - chest, shoulders, triceps',
+      coachingNotes: 'Control the eccentric (lowering). Keep core braced on pressing movements. If a weight feels too light at 8 reps, increase next week.',
+      equipmentNeeded: 'Barbell, dumbbells, cable machine, dip bars'
+    },
+    { 
+      day: 2, dayName: 'Tuesday', type: 'cardio', name: 'LISS Cardio', 
+      duration: 30, distance: null, intensity: 'easy',
+      warmUp: '2 min very easy',
+      mainWorkout: '25-30 min steady-state cardio at 60-70% max HR. Options: incline treadmill walk, cycling, elliptical, rowing. Should be able to hold a conversation.',
+      coolDown: '3 min easy, then stretch',
+      coachingNotes: 'Light cardio aids recovery and cardiovascular health without impacting muscle gains. Keep it easy!'
+    },
+    { 
+      day: 3, dayName: 'Wednesday', type: 'lift', name: 'Pull Day (Back/Biceps)', 
+      duration: Math.round(50 * multiplier), distance: null, intensity: 'hard',
+      warmUp: '5 min cardio, band pull-aparts, face pulls, 2 easy sets of lat pulldowns',
+      mainWorkout: 'Deadlifts or RDL 4x6, Barbell Rows 4x8, Lat Pulldowns 3x12, Seated Cable Rows 3x12, Face Pulls 3x15, Barbell Curls 3x10, Hammer Curls 3x12. Rest 2-3 min after deadlifts, 90 sec others.',
+      coolDown: 'Dead hangs 3x30 sec, lat and bicep stretches',
+      coachingNotes: 'Squeeze shoulder blades on all pulling movements. Keep lower back neutral on rows. Deadlift form is critical - video yourself.',
+      equipmentNeeded: 'Barbell, dumbbells, cable machine, pull-up bar'
+    },
+    { 
+      day: 4, dayName: 'Thursday', type: 'rest', name: 'Complete Rest', 
+      duration: 0, distance: null, intensity: 'easy',
+      warmUp: 'None',
+      mainWorkout: 'Full rest day. Focus on sleep (aim for 8+ hours) and nutrition (hit protein target: 1.6-2g per kg bodyweight).',
+      coolDown: 'Optional foam rolling before bed',
+      coachingNotes: 'Muscles grow during rest, not during workouts. Use this day to meal prep for the week ahead.'
+    },
+    { 
+      day: 5, dayName: 'Friday', type: 'lift', name: 'Leg Day', 
+      duration: Math.round(55 * multiplier), distance: null, intensity: 'hard',
+      warmUp: '5 min cycling, leg swings, bodyweight squats, 2 warm-up sets of squats',
+      mainWorkout: 'Back Squats 4x8, Romanian Deadlifts 3x10, Leg Press 3x12, Walking Lunges 3x10 each, Leg Curls 3x12, Calf Raises 4x15, Hanging Leg Raises 3x12. Rest 2-3 min for squats/RDL, 90 sec others.',
+      coolDown: '10 min stretching - quads, hamstrings, hip flexors, glutes',
+      coachingNotes: 'Squat depth matters - aim for thighs parallel or below. Drive through whole foot. This is the hardest day - fuel well beforehand.',
+      equipmentNeeded: 'Squat rack, barbell, leg press, dumbbells'
+    },
+    { 
+      day: 6, dayName: 'Saturday', type: 'lift', name: 'Upper Hypertrophy', 
+      duration: Math.round(45 * multiplier), distance: null, intensity: 'moderate',
+      warmUp: '5 min cardio, arm circles, light push-ups',
+      mainWorkout: 'Incline DB Press 3x12, Cable Flys 3x15, Arnold Press 3x12, Rear Delt Flys 3x15, Tricep Overhead Extension 3x12, Preacher Curls 3x12, Shrugs 3x15. Rest 60-90 sec. Focus on mind-muscle connection and controlled tempo.',
+      coolDown: 'Full upper body stretch routine',
+      coachingNotes: 'Moderate day - use lighter weights and focus on feeling the muscle work. This is a great day to try new exercises.',
+      equipmentNeeded: 'Dumbbells, cables, preacher curl bench'
+    }
   ];
 }
 
 export default { analyzePerformance, generateChatResponse, generatePersonalizedPlan };
-

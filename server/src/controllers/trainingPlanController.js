@@ -90,16 +90,25 @@ export const generateTrainingPlan = async (req, res, next) => {
     const weeks = aiPlan.weeks.map(week => ({
       weekNumber: week.weekNumber,
       theme: week.theme,
+      focus: week.focus || '',
+      weeklyTips: week.weeklyTips || '',
       totalDistance: week.totalDistance || 0,
       totalDuration: week.workouts.reduce((sum, w) => sum + (w.duration || 0), 0),
       workouts: week.workouts.map(w => ({
         day: w.day,
+        dayName: w.dayName || '',
         type: w.type,
         name: w.name,
-        description: w.description,
+        description: w.description || w.mainWorkout?.substring(0, 100) || '',
         duration: w.duration || 0,
         distance: w.distance || undefined,
         intensity: w.intensity || 'moderate',
+        targetHeartRate: w.targetHeartRate || '',
+        warmUp: w.warmUp || '',
+        mainWorkout: w.mainWorkout || '',
+        coolDown: w.coolDown || '',
+        coachingNotes: w.coachingNotes || '',
+        equipmentNeeded: w.equipmentNeeded || '',
         completed: false
       }))
     }));
@@ -132,7 +141,10 @@ export const generateTrainingPlan = async (req, res, next) => {
         targetDistance: totalDistance
       },
       aiGenerated: aiPlan.aiGenerated || false,
-      tips: aiPlan.tips || []
+      weeklyOverview: aiPlan.weeklyOverview || '',
+      tips: aiPlan.tips || [],
+      nutritionGuidance: aiPlan.nutritionGuidance || '',
+      recoveryProtocol: aiPlan.recoveryProtocol || ''
     });
     
     res.status(201).json({

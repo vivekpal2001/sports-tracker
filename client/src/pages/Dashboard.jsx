@@ -136,7 +136,8 @@ export default function Dashboard() {
     );
   }
   
-  const performanceScore = aiInsights?.performanceScore || 75;
+  const performanceScore = aiInsights?.performanceScore ?? 0;
+  const hasWorkouts = workouts.length > 0;
   
   return (
     <div className="space-y-6">
@@ -338,10 +339,14 @@ export default function Dashboard() {
               </span>
             </h3>
             <p className="text-gray-300 leading-relaxed">
-              <TypeWriter 
-                text={aiInsights?.summary || "Your training consistency is excellent this week! Consider adding an easy recovery session tomorrow, as your training load has been elevated. Your running pace has improved by 3% compared to last week."}
-                speed={20}
-              />
+              {hasWorkouts ? (
+                <TypeWriter 
+                  text={aiInsights?.summary || "Analyzing your training data..."}
+                  speed={20}
+                />
+              ) : (
+                "Start logging workouts to receive personalized AI insights about your training!"
+              )}
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
               {(aiInsights?.recommendations?.slice(0, 3) || []).map((rec, i) => (

@@ -28,6 +28,19 @@ export const createChallenge = async (req, res, next) => {
       }]
     });
     
+    // Calculate initial progress from existing workouts
+    const initialProgress = await calculateUserProgress(
+      req.user._id,
+      type,
+      new Date(startDate),
+      new Date(endDate)
+    );
+    
+    if (initialProgress > 0) {
+      challenge.participants[0].progress = initialProgress;
+      await challenge.save();
+    }
+    
     // Check for challenge creator badge
     const creatorChallenges = await Challenge.countDocuments({ creator: req.user._id });
     if (creatorChallenges >= 5) {
@@ -69,9 +82,24 @@ export const getMyChallenges = async (req, res, next) => {
       .sort({ startDate: -1 })
       .limit(parseInt(limit));
     
+    // Add current user's progress to each challenge
+    const challengesWithUserProgress = challenges.map(challenge => {
+      const userParticipant = challenge.participants.find(
+        p => p.user._id.toString() === req.user._id.toString()
+      );
+      
+      return {
+        ...challenge.toJSON(),
+        userProgress: userParticipant?.progress || 0,
+        userProgressPercent: userParticipant 
+          ? Math.min(100, Math.round((userParticipant.progress / challenge.target) * 100))
+          : 0
+      };
+    });
+    
     res.json({
       success: true,
-      data: challenges, 
+      data: challengesWithUserProgress, 
       count: challenges.length
     });
   } catch (error) {
@@ -204,10 +232,18 @@ export const joinChallenge = async (req, res, next) => {
       });
     }
     
-    // Add participant
+    // Calculate initial progress from existing workouts
+    const initialProgress = await calculateUserProgress(
+      req.user._id,
+      challenge.type,
+      challenge.startDate,
+      challenge.endDate
+    );
+    
+    // Add participant with initial progress
     challenge.participants.push({
       user: req.user._id,
-      progress: 0,
+      progress: initialProgress,
       joinedAt: new Date()
     });
     
@@ -215,11 +251,10 @@ export const joinChallenge = async (req, res, next) => {
     
     // Notify creator
     await Notification.create({
-      user: challenge.creator,
+      recipient: challenge.creator,
+      sender: req.user._id,
       type: 'challenge_join',
-      fromUser: req.user._id,
-      message: `joined your challenge "${challenge.title}"`,
-      link: `/dashboard/challenges/${challenge._id}`
+      message: `joined your challenge "${challenge.title}"`
     });
     
     await challenge.populate('participants.user', 'name avatar');
@@ -286,15 +321,10 @@ export const inviteToChallenge = async (req, res, next) => {
     
     // Send notification to user
     await Notification.create({
-      user: userId,
+      recipient: userId,
+      sender: req.user._id,
       type: 'challenge_invite',
-      fromUser: req.user._id,
-      message: `invited you to join the challenge "${challenge.title}"`,
-      link: `/dashboard/challenges/${challenge._id}`,
-      data: {
-        challengeId: challenge._id,
-        inviteCode: challenge.inviteCode
-      }
+      message: `invited you to join the challenge "${challenge.title}"`
     });
     
     res.json({
@@ -362,6 +392,52 @@ export const syncChallengeProgress = async (req, res, next) => {
   }
 };
 
+// @desc    Update a challenge
+// @route   PUT /api/challenges/:id
+// @access  Private (Creator only)
+export const updateChallenge = async (req, res, next) => {
+  try {
+    const { title, description, target, unit, startDate, endDate, visibility } = req.body;
+    
+    const challenge = await Challenge.findById(req.params.id);
+    
+    if (!challenge) {
+      return res.status(404).json({
+        success: false,
+        message: 'Challenge not found'
+      });
+    }
+    
+    if (challenge.creator.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Only the challenge creator can edit it'
+      });
+    }
+    
+    // Update fields
+    if (title) challenge.title = title;
+    if (description !== undefined) challenge.description = description;
+    if (target) challenge.target = target;
+    if (unit) challenge.unit = unit;
+    if (startDate) challenge.startDate = startDate;
+    if (endDate) challenge.endDate = endDate;
+    if (visibility) challenge.visibility = visibility;
+    
+    await challenge.save();
+    
+    await challenge.populate('creator', 'name avatar');
+    await challenge.populate('participants.user', 'name avatar');
+    
+    res.json({
+      success: true,
+      data: challenge
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // @desc    Delete a challenge
 // @route   DELETE /api/challenges/:id
 // @access  Private (Creator only)
@@ -396,11 +472,31 @@ export const deleteChallenge = async (req, res, next) => {
 
 // Helper function to calculate user's progress for a challenge
 async function calculateUserProgress(userId, type, startDate, endDate) {
+  // Ensure dates are Date objects and normalize to start/end of day
+  const start = new Date(startDate);
+  start.setHours(0, 0, 0, 0);
+  
+  const end = new Date(endDate);
+  end.setHours(23, 59, 59, 999);
+  
   const matchQuery = {
     user: userId,
-    date: { $gte: startDate, $lte: endDate },
+    date: { $gte: start, $lte: end },
     type: { $ne: 'biometrics' }
   };
+  
+  // Debug logging
+  console.log('📊 Calculating progress:', {
+    userId: userId.toString(),
+    type,
+    startDate: start.toISOString(),
+    endDate: end.toISOString()
+  });
+  
+  // First, let's see how many workouts exist for this user
+  const totalWorkouts = await Workout.countDocuments({ user: userId, type: { $ne: 'biometrics' } });
+  const matchingWorkouts = await Workout.countDocuments(matchQuery);
+  console.log(`📊 User has ${totalWorkouts} total workouts, ${matchingWorkouts} in date range`);
   
   let progress = 0;
   

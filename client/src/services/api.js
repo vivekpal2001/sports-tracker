@@ -59,6 +59,8 @@ export const workoutAPI = {
 export const aiAPI = {
   analyze: () => api.get('/ai/analyze'),
   chat: (message) => api.post('/ai/chat', { message }),
+  getChatHistory: () => api.get('/ai/chat-history'),
+  clearChatHistory: () => api.delete('/ai/chat-history'),
   weeklySummary: () => api.get('/ai/weekly-summary')
 };
 

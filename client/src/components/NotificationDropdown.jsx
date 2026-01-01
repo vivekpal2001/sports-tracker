@@ -115,6 +115,10 @@ export default function NotificationDropdown() {
         return `${name} started following you`;
       case 'badge':
         return `You earned a new badge!`;
+      case 'challenge_join':
+        return `${name} ${notification.message}`;
+      case 'challenge_invite':
+        return `${name} ${notification.message}`;
       default:
         return notification.message || 'New notification';
     }

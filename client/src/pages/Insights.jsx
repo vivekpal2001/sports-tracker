@@ -32,19 +32,28 @@ export default function Insights() {
   
   const fetchInsights = async () => {
     try {
-      const response = await aiAPI.analyze();
-      setInsights(response.data.data);
+      const [insightsRes, historyRes] = await Promise.all([
+        aiAPI.analyze(),
+        aiAPI.getChatHistory()
+      ]);
       
-      // Add initial AI message
-      setChatMessages([{
-        role: 'assistant',
-        content: response.data.data?.summary || "Hello! I'm your AI coach. Ask me anything about your training!",
-        suggestions: [
-          "How is my training going?",
-          "What should I work on?",
-          "Am I recovering well?"
-        ]
-      }]);
+      setInsights(insightsRes.data.data);
+      
+      // Load chat history or set initial message
+      if (historyRes.data.data && historyRes.data.data.length > 0) {
+        setChatMessages(historyRes.data.data);
+      } else {
+        // No history - add initial AI message
+        setChatMessages([{
+          role: 'assistant',
+          content: insightsRes.data.data?.summary || "Hello! I'm your AI coach. Ask me anything about your training!",
+          suggestions: [
+            "How is my training going?",
+            "What should I work on?",
+            "Am I recovering well?"
+          ]
+        }]);
+      }
     } catch (error) {
       console.error('Failed to fetch insights:', error);
     } finally {
@@ -86,7 +95,7 @@ export default function Insights() {
     );
   }
   
-  const score = insights?.performanceScore || 75;
+  const score = insights?.performanceScore ?? 0;
   const scoreBreakdown = insights?.scoreBreakdown || {};
   
   return (
@@ -113,10 +122,10 @@ export default function Insights() {
           <h3 className="text-lg font-semibold text-white mb-6">Score Breakdown</h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {[
-              { label: 'Consistency', value: scoreBreakdown.consistency || 70, color: 'primary' },
-              { label: 'Intensity', value: scoreBreakdown.intensity || 75, color: 'lime' },
-              { label: 'Recovery', value: scoreBreakdown.recovery || 70, color: 'orange' },
-              { label: 'Progression', value: scoreBreakdown.progression || 80, color: 'crimson' }
+              { label: 'Consistency', value: scoreBreakdown.consistency ?? 0, color: 'primary' },
+              { label: 'Intensity', value: scoreBreakdown.intensity ?? 0, color: 'lime' },
+              { label: 'Recovery', value: scoreBreakdown.recovery ?? 0, color: 'orange' },
+              { label: 'Progression', value: scoreBreakdown.progression ?? 0, color: 'crimson' }
             ].map((item) => (
               <div key={item.label} className="text-center">
                 <CircularProgress 
@@ -141,22 +150,22 @@ export default function Insights() {
             <h3 className="text-lg font-semibold text-white">Key Insights</h3>
           </div>
           <div className="space-y-3">
-            {(insights?.keyInsights || [
-              "Your training consistency is excellent",
-              "Consider adding more recovery sessions",
-              "Running pace has improved by 5%"
-            ]).map((insight, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="flex items-start gap-3 p-3 rounded-xl bg-dark-300/50"
-              >
-                <Sparkles className="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5" />
-                <p className="text-gray-300">{insight}</p>
-              </motion.div>
-            ))}
+            {insights?.keyInsights?.length > 0 ? (
+              insights.keyInsights.map((insight, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: i * 0.1 }}
+                  className="flex items-start gap-3 p-3 rounded-xl bg-dark-300/50"
+                >
+                  <Sparkles className="w-5 h-5 text-primary-500 flex-shrink-0 mt-0.5" />
+                  <p className="text-gray-300">{insight}</p>
+                </motion.div>
+              ))
+            ) : (
+              <p className="text-gray-500 text-center py-4">Log some workouts to get AI insights</p>
+            )}
           </div>
         </Card>
         
@@ -171,12 +180,16 @@ export default function Insights() {
             <div>
               <h4 className="text-sm font-medium text-lime-500 mb-2">Positive Trends</h4>
               <div className="space-y-2">
-                {(insights?.trends?.positive || ['Consistent training schedule', 'Good workout frequency']).map((trend, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm text-gray-300">
-                    <CheckCircle2 className="w-4 h-4 text-lime-500" />
-                    {trend}
-                  </div>
-                ))}
+                {insights?.trends?.positive?.length > 0 ? (
+                  insights.trends.positive.map((trend, i) => (
+                    <div key={i} className="flex items-center gap-2 text-sm text-gray-300">
+                      <CheckCircle2 className="w-4 h-4 text-lime-500" />
+                      {trend}
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-sm">No trends available yet</p>
+                )}
               </div>
             </div>
             
@@ -203,40 +216,40 @@ export default function Insights() {
           <Target className="w-5 h-5 text-orange-500" />
           <h3 className="text-lg font-semibold text-white">Recommendations</h3>
         </div>
-        <div className="grid md:grid-cols-3 gap-4">
-          {(insights?.recommendations?.slice(0, 3) || [
-            { priority: 'high', category: 'training', title: 'Maintain Consistency', description: 'Keep up your current training frequency.' },
-            { priority: 'medium', category: 'recovery', title: 'Track Sleep', description: 'Log your biometrics daily for better insights.' },
-            { priority: 'low', category: 'technique', title: 'Add Intervals', description: 'Consider adding interval training.' }
-          ]).map((rec, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className={`
-                p-4 rounded-xl border
-                ${rec.priority === 'high' ? 'bg-crimson-500/10 border-crimson-500/30' : ''}
-                ${rec.priority === 'medium' ? 'bg-orange-500/10 border-orange-500/30' : ''}
-                ${rec.priority === 'low' ? 'bg-lime-500/10 border-lime-500/30' : ''}
-              `}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <span className={`
-                  text-xs font-bold uppercase
-                  ${rec.priority === 'high' ? 'text-crimson-500' : ''}
-                  ${rec.priority === 'medium' ? 'text-orange-500' : ''}
-                  ${rec.priority === 'low' ? 'text-lime-500' : ''}
-                `}>
-                  {rec.priority} priority
-                </span>
-                <span className="text-xs text-gray-500">{rec.category}</span>
-              </div>
-              <h4 className="font-medium text-white mb-1">{rec.title}</h4>
-              <p className="text-sm text-gray-400">{rec.description}</p>
-            </motion.div>
-          ))}
-        </div>
+        {insights?.recommendations?.length > 0 ? (
+          <div className="grid md:grid-cols-3 gap-4">
+            {insights.recommendations.slice(0, 3).map((rec, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.1 }}
+                className={`
+                  p-4 rounded-xl border
+                  ${rec.priority === 'high' ? 'bg-crimson-500/10 border-crimson-500/30' : ''}
+                  ${rec.priority === 'medium' ? 'bg-orange-500/10 border-orange-500/30' : ''}
+                  ${rec.priority === 'low' ? 'bg-lime-500/10 border-lime-500/30' : ''}
+                `}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`
+                    text-xs font-bold uppercase
+                    ${rec.priority === 'high' ? 'text-crimson-500' : ''}
+                    ${rec.priority === 'medium' ? 'text-orange-500' : ''}
+                    ${rec.priority === 'low' ? 'text-lime-500' : ''}
+                  `}>
+                    {rec.priority} priority
+                  </span>
+                  <span className="text-xs text-gray-500">{rec.category}</span>
+                </div>
+                <h4 className="font-medium text-white mb-1">{rec.title}</h4>
+                <p className="text-sm text-gray-400">{rec.description}</p>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-gray-500 text-center py-8">Log workouts to receive personalized recommendations</p>
+        )}
       </Card>
       
       {/* AI Chat */}

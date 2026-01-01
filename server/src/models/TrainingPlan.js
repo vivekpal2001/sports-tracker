@@ -5,9 +5,10 @@ const workoutScheduleSchema = new mongoose.Schema({
     type: Number, // 0-6 (Sunday-Saturday)
     required: true
   },
+  dayName: String, // e.g., 'Monday'
   type: {
     type: String,
-    enum: ['run', 'lift', 'cardio', 'rest', 'cross-training'],
+    enum: ['run', 'lift', 'cardio', 'rest', 'cross-training', 'yoga'],
     required: true
   },
   name: {
@@ -19,9 +20,15 @@ const workoutScheduleSchema = new mongoose.Schema({
   distance: Number, // km
   intensity: {
     type: String,
-    enum: ['easy', 'moderate', 'hard', 'max'],
+    enum: ['easy', 'moderate', 'hard', 'very_hard', 'max'],
     default: 'moderate'
   },
+  targetHeartRate: String, // e.g., 'Zone 2 (60-70% max HR)'
+  warmUp: String, // Specific warm-up instructions
+  mainWorkout: String, // Detailed workout instructions
+  coolDown: String, // Cool-down instructions
+  coachingNotes: String, // Tips and technique guidance
+  equipmentNeeded: String, // Required equipment
   completed: {
     type: Boolean,
     default: false
@@ -39,6 +46,8 @@ const weekSchema = new mongoose.Schema({
     required: true
   },
   theme: String, // e.g., "Base Building", "Peak Week", "Recovery"
+  focus: String, // Brief focus for the week
+  weeklyTips: String, // Specific advice for this week
   totalDistance: Number,
   totalDuration: Number,
   workouts: [workoutScheduleSchema]
@@ -104,9 +113,12 @@ const trainingPlanSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  weeklyOverview: String, // Overall plan philosophy
   tips: [{
     type: String
-  }]
+  }],
+  nutritionGuidance: String, // Nutrition advice for this plan
+  recoveryProtocol: String // Recovery recommendations
 }, {
   timestamps: true
 });

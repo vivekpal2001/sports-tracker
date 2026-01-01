@@ -1,4 +1,5 @@
 import Workout from '../models/Workout.js';
+import ChatMessage from '../models/ChatMessage.js';
 import { analyzePerformance, generateChatResponse } from '../services/aiService.js';
 
 // @desc    Get AI performance analysis
@@ -56,6 +57,13 @@ export const chat = async (req, res, next) => {
       });
     }
     
+    // Save user message to database
+    await ChatMessage.create({
+      user: req.user._id,
+      role: 'user',
+      content: message
+    });
+    
     // Get recent workout context
     const recentWorkouts = await Workout.find({ user: req.user._id })
       .sort({ date: -1 })
@@ -77,9 +85,54 @@ export const chat = async (req, res, next) => {
     
     const response = await generateChatResponse(req.user._id, message, workoutContext);
     
+    // Save assistant response to database
+    await ChatMessage.create({
+      user: req.user._id,
+      role: 'assistant',
+      content: response.response,
+      suggestions: response.suggestions || []
+    });
+    
     res.json({
       success: true,
       data: response
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get chat history
+// @route   GET /api/ai/chat-history
+// @access  Private
+export const getChatHistory = async (req, res, next) => {
+  try {
+    const messages = await ChatMessage.getChatHistory(req.user._id, 100);
+    
+    res.json({
+      success: true,
+      data: messages.map(m => ({
+        role: m.role,
+        content: m.content,
+        suggestions: m.suggestions || [],
+        createdAt: m.createdAt
+      }))
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Clear chat history
+// @route   DELETE /api/ai/chat-history
+// @access  Private
+export const clearChatHistory = async (req, res, next) => {
+  try {
+    await ChatMessage.clearHistory(req.user._id);
+    
+    res.json({
+      success: true,
+      message: 'Chat history cleared'
     });
   } catch (error) {
     next(error);

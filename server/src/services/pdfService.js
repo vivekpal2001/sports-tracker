@@ -40,7 +40,7 @@ export const generateTrainingPlanPDF = async (user, weeklyData, aiInsights) => {
   doc.setFont('helvetica', 'bold');
   doc.text('AI PERFORMANCE SCORE', 25, yPos + 12);
   
-  const score = aiInsights?.performanceScore || 75;
+  const score = aiInsights?.performanceScore ?? 0;
   doc.setFontSize(28);
   doc.setTextColor(...accentColor);
   doc.text(`${score}`, pageWidth - 45, yPos + 22);
@@ -51,7 +51,7 @@ export const generateTrainingPlanPDF = async (user, weeklyData, aiInsights) => {
   doc.setFontSize(9);
   doc.setTextColor(150, 150, 150);
   const breakdown = aiInsights?.scoreBreakdown || {};
-  doc.text(`Consistency: ${breakdown.consistency || 70}%  |  Intensity: ${breakdown.intensity || 75}%  |  Recovery: ${breakdown.recovery || 70}%`, 25, yPos + 28);
+  doc.text(`Consistency: ${breakdown.consistency ?? 0}%  |  Intensity: ${breakdown.intensity ?? 0}%  |  Recovery: ${breakdown.recovery ?? 0}%`, 25, yPos + 28);
   
   yPos += 45;
   
@@ -101,11 +101,9 @@ export const generateTrainingPlanPDF = async (user, weeklyData, aiInsights) => {
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(200, 200, 200);
   
-  const insights = aiInsights?.keyInsights || [
-    'Maintain your current training consistency',
-    'Consider adding more recovery days',
-    'Good progress on running volume'
-  ];
+  const insights = aiInsights?.keyInsights?.length > 0 
+    ? aiInsights.keyInsights 
+    : ['No insights yet - log workouts to get AI analysis'];
   
   insights.forEach((insight, i) => {
     doc.setTextColor(...primaryColor);
@@ -130,13 +128,13 @@ export const generateTrainingPlanPDF = async (user, weeklyData, aiInsights) => {
   yPos += 10;
   
   const weeklyPlan = aiInsights?.weeklyPlan || {
-    monday: 'Easy run - 30 min',
-    tuesday: 'Strength training',
-    wednesday: 'Tempo run',
-    thursday: 'Active recovery',
-    friday: 'Interval training',
-    saturday: 'Long run',
-    sunday: 'Rest day'
+    monday: 'No plan - log workouts first',
+    tuesday: 'No plan',
+    wednesday: 'No plan',
+    thursday: 'No plan',
+    friday: 'No plan',
+    saturday: 'No plan',
+    sunday: 'No plan'
   };
   
   const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];

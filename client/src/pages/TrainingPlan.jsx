@@ -12,7 +12,12 @@ import {
   Play,
   Target,
   Sparkles,
-  Lightbulb
+  Lightbulb,
+  Clock,
+  Flame,
+  Heart,
+  Dumbbell,
+  Info
 } from 'lucide-react';
 import { Card, Button, LoadingSpinner } from '../components/ui';
 import { trainingPlanAPI } from '../services/api';
@@ -40,6 +45,7 @@ export default function TrainingPlan() {
   const [activePlan, setActivePlan] = useState(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [creating, setCreating] = useState(false);
+  const [selectedWorkout, setSelectedWorkout] = useState(null);
   
   // Create wizard state
   const [wizardStep, setWizardStep] = useState(1);
@@ -285,7 +291,7 @@ export default function TrainingPlan() {
                           ? 'border-white/5 bg-dark-200/50' 
                           : 'border-white/10 bg-dark-200/50 hover:border-primary-500/50'}
                     `}
-                    onClick={() => !isRest && !isCompleted && handleCompleteWorkout(activePlan.currentWeek, i)}
+                    onClick={() => workout && setSelectedWorkout({ ...workout, weekNumber: activePlan.currentWeek })}
                   >
                     <p className="text-xs text-gray-500 mb-1">{day}</p>
                     <div className="flex items-center justify-between">
@@ -294,12 +300,13 @@ export default function TrainingPlan() {
                         {workout?.type === 'lift' && '🏋️'}
                         {workout?.type === 'cardio' && '❤️'}
                         {workout?.type === 'cross-training' && '🚴'}
+                        {workout?.type === 'yoga' && '🧘'}
                         {workout?.type === 'rest' && '😴'}
                       </span>
                       {isCompleted ? (
                         <CheckCircle className="w-4 h-4 text-lime-500" />
                       ) : !isRest && (
-                        <Circle className="w-4 h-4 text-gray-600" />
+                        <Info className="w-4 h-4 text-gray-500" />
                       )}
                     </div>
                     <p className="text-xs font-medium text-white truncate">{workout?.name}</p>
@@ -531,6 +538,161 @@ export default function TrainingPlan() {
                     </div>
                   </div>
                 )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+      
+      {/* Workout Detail Modal */}
+      <AnimatePresence>
+        {selectedWorkout && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+            onClick={() => setSelectedWorkout(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.9, y: 20 }}
+              className="bg-dark-300 rounded-2xl w-full max-w-2xl border border-white/10 max-h-[90vh] overflow-hidden flex flex-col"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between p-6 border-b border-white/10 flex-shrink-0">
+                <div className="flex items-center gap-3">
+                  <span className="text-3xl">
+                    {selectedWorkout.type === 'run' && '🏃'}
+                    {selectedWorkout.type === 'lift' && '🏋️'}
+                    {selectedWorkout.type === 'cardio' && '❤️'}
+                    {selectedWorkout.type === 'cross-training' && '🚴'}
+                    {selectedWorkout.type === 'yoga' && '🧘'}
+                    {selectedWorkout.type === 'rest' && '😴'}
+                  </span>
+                  <div>
+                    <h2 className="text-xl font-bold text-white">{selectedWorkout.name}</h2>
+                    <p className="text-sm text-gray-400">
+                      {selectedWorkout.dayName || DAYS[selectedWorkout.day]} • Week {selectedWorkout.weekNumber}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setSelectedWorkout(null)}
+                  className="p-2 rounded-lg hover:bg-white/10 text-gray-400 hover:text-white"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              
+              {/* Content */}
+              <div className="p-6 overflow-y-auto flex-1 space-y-6">
+                {/* Quick Stats */}
+                <div className="flex flex-wrap gap-4">
+                  {selectedWorkout.duration > 0 && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-dark-200/50 rounded-xl">
+                      <Clock className="w-4 h-4 text-primary-500" />
+                      <span className="text-sm text-white">{selectedWorkout.duration} min</span>
+                    </div>
+                  )}
+                  {selectedWorkout.distance && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-dark-200/50 rounded-xl">
+                      <Target className="w-4 h-4 text-lime-500" />
+                      <span className="text-sm text-white">{selectedWorkout.distance} km</span>
+                    </div>
+                  )}
+                  {selectedWorkout.intensity && (
+                    <div className={`flex items-center gap-2 px-3 py-2 rounded-xl ${
+                      selectedWorkout.intensity === 'easy' ? 'bg-lime-500/20 text-lime-500' :
+                      selectedWorkout.intensity === 'moderate' ? 'bg-yellow-500/20 text-yellow-500' :
+                      selectedWorkout.intensity === 'hard' ? 'bg-orange-500/20 text-orange-500' :
+                      'bg-crimson-500/20 text-crimson-500'
+                    }`}>
+                      <Flame className="w-4 h-4" />
+                      <span className="text-sm capitalize">{selectedWorkout.intensity.replace('_', ' ')}</span>
+                    </div>
+                  )}
+                  {selectedWorkout.targetHeartRate && (
+                    <div className="flex items-center gap-2 px-3 py-2 bg-crimson-500/20 rounded-xl">
+                      <Heart className="w-4 h-4 text-crimson-500" />
+                      <span className="text-sm text-crimson-400">{selectedWorkout.targetHeartRate}</span>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Warm Up */}
+                {selectedWorkout.warmUp && (
+                  <div className="p-4 rounded-xl bg-lime-500/10 border border-lime-500/20">
+                    <h3 className="font-semibold text-lime-500 mb-2 flex items-center gap-2">
+                      <span className="text-lg">🔥</span> Warm-Up
+                    </h3>
+                    <p className="text-gray-300 text-sm leading-relaxed">{selectedWorkout.warmUp}</p>
+                  </div>
+                )}
+                
+                {/* Main Workout */}
+                {selectedWorkout.mainWorkout && (
+                  <div className="p-4 rounded-xl bg-primary-500/10 border border-primary-500/20">
+                    <h3 className="font-semibold text-primary-500 mb-2 flex items-center gap-2">
+                      <span className="text-lg">💪</span> Main Workout
+                    </h3>
+                    <p className="text-gray-300 text-sm leading-relaxed whitespace-pre-line">{selectedWorkout.mainWorkout}</p>
+                  </div>
+                )}
+                
+                {/* Cool Down */}
+                {selectedWorkout.coolDown && (
+                  <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+                    <h3 className="font-semibold text-purple-400 mb-2 flex items-center gap-2">
+                      <span className="text-lg">🧊</span> Cool-Down
+                    </h3>
+                    <p className="text-gray-300 text-sm leading-relaxed">{selectedWorkout.coolDown}</p>
+                  </div>
+                )}
+                
+                {/* Coaching Notes */}
+                {selectedWorkout.coachingNotes && (
+                  <div className="p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/20">
+                    <h3 className="font-semibold text-yellow-500 mb-2 flex items-center gap-2">
+                      <Lightbulb className="w-4 h-4" /> Coach's Tips
+                    </h3>
+                    <p className="text-gray-300 text-sm leading-relaxed">{selectedWorkout.coachingNotes}</p>
+                  </div>
+                )}
+                
+                {/* Equipment Needed */}
+                {selectedWorkout.equipmentNeeded && (
+                  <div className="p-4 rounded-xl bg-dark-200/50 border border-white/10">
+                    <h3 className="font-semibold text-gray-400 mb-2 flex items-center gap-2">
+                      <Dumbbell className="w-4 h-4" /> Equipment Needed
+                    </h3>
+                    <p className="text-gray-300 text-sm">{selectedWorkout.equipmentNeeded}</p>
+                  </div>
+                )}
+              </div>
+              
+              {/* Footer */}
+              <div className="p-6 border-t border-white/10 flex gap-3">
+                {!selectedWorkout.completed && selectedWorkout.type !== 'rest' && (
+                  <button
+                    onClick={() => {
+                      handleCompleteWorkout(selectedWorkout.weekNumber, selectedWorkout.day);
+                      setSelectedWorkout(null);
+                    }}
+                    className="flex-1 py-3 bg-lime-500 hover:bg-lime-400 text-dark-500 font-medium rounded-xl transition-colors flex items-center justify-center gap-2"
+                  >
+                    <CheckCircle className="w-5 h-5" />
+                    Mark as Complete
+                  </button>
+                )}
+                <button
+                  onClick={() => setSelectedWorkout(null)}
+                  className="px-6 py-3 bg-dark-200 hover:bg-dark-100 text-white rounded-xl transition-colors"
+                >
+                  Close
+                </button>
               </div>
             </motion.div>
           </motion.div>

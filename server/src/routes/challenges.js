@@ -9,6 +9,7 @@ import {
   getChallengeLeaderboard,
   inviteToChallenge,
   syncChallengeProgress,
+  updateChallenge,
   deleteChallenge
 } from '../controllers/challengeController.js';
 
@@ -22,6 +23,7 @@ router.post('/', createChallenge);
 router.get('/', getMyChallenges);
 router.get('/discover', discoverChallenges);
 router.get('/:id', getChallengeById);
+router.put('/:id', updateChallenge);
 router.delete('/:id', deleteChallenge);
 
 // Participation

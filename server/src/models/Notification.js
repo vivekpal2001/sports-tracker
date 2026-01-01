@@ -14,7 +14,7 @@ const notificationSchema = new mongoose.Schema({
   },
   type: {
     type: String,
-    enum: ['reaction', 'comment', 'follow', 'badge', 'mention'],
+    enum: ['reaction', 'comment', 'follow', 'badge', 'mention', 'challenge_join', 'challenge_invite'],
     required: true
   },
   // What the notification is about
