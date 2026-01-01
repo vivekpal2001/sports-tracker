@@ -18,7 +18,7 @@ const workoutSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['run', 'lift', 'cardio', 'biometrics'],
+    enum: ['run', 'lift', 'cardio', 'biometrics', 'yoga'],
     index: true
   },
   title: {
@@ -112,6 +112,53 @@ const workoutSchema = new mongoose.Schema({
     }
   },
   
+  // Yoga-specific fields
+  yoga: {
+    style: {
+      type: String,
+      enum: ['vinyasa', 'hatha', 'ashtanga', 'yin', 'restorative', 'power', 'kundalini', 'bikram', 'iyengar', 'prenatal', 'other']
+    },
+    poses: [{
+      poseId: String,
+      name: String,
+      duration: Number,  // seconds held
+      difficulty: {
+        type: String,
+        enum: ['beginner', 'intermediate', 'advanced']
+      }
+    }],
+    sequence: {
+      id: String,
+      name: String
+    },
+    breathwork: {
+      type: String,  // Pranayama type
+      duration: Number  // minutes
+    },
+    meditation: {
+      duration: Number,  // minutes
+      meditationType: {
+        type: String,
+        enum: ['guided', 'silent', 'visualization', 'body-scan', 'mindfulness']
+      }
+    },
+    flexibility: {
+      preScore: { type: Number, min: 1, max: 10 },  // before session
+      postScore: { type: Number, min: 1, max: 10 }  // after session
+    },
+    mindfulnessRating: {
+      type: Number,
+      min: 1,
+      max: 10
+    },
+    props: [{
+      type: String,
+      enum: ['mat', 'block', 'strap', 'bolster', 'blanket', 'wheel', 'cushion']
+    }],
+    caloriesBurned: Number,
+    roomTemperature: Number  // for hot yoga
+  },
+  
   // RPE (Rate of Perceived Exertion) 1-10
   rpe: {
     type: Number,
@@ -164,7 +211,8 @@ workoutSchema.methods.calculateTrainingLoad = function() {
     run: 1.2,
     lift: 1.0,
     cardio: 1.1,
-    biometrics: 0
+    biometrics: 0,
+    yoga: 0.8
   };
   
   return Math.round(load * (typeMultipliers[this.type] || 1));

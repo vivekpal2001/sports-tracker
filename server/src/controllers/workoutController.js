@@ -5,6 +5,7 @@ import { updateGoalProgress } from './goalController.js';
 import { checkAndAwardBadges } from '../services/badgeService.js';
 import { calculateRecoveryScore } from '../services/recoveryService.js';
 import { createActivity } from './feedController.js';
+import { syncUserChallenges } from './challengeController.js';
 
 // @desc    Get all workouts for user
 // @route   GET /api/workouts
@@ -102,6 +103,7 @@ export const createWorkout = async (req, res, next) => {
       run: '🏃 Run',
       lift: '🏋️ Strength Training',
       cardio: '❤️ Cardio',
+      yoga: '🧘 Yoga',
       biometrics: '📊 Biometrics'
     };
     
@@ -115,6 +117,9 @@ export const createWorkout = async (req, res, next) => {
         type: workout.type
       }
     });
+    
+    // Sync challenge progress
+    await syncUserChallenges(req.user._id, workout);
     
     res.status(201).json({
       success: true,

@@ -18,7 +18,8 @@ import {
   Target,
   Award,
   Calendar,
-  Users
+  Users,
+  UtensilsCrossed
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../ui';
@@ -27,8 +28,10 @@ import NotificationDropdown from '../NotificationDropdown';
 const NAV_ITEMS = [
   { path: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { path: '/dashboard/feed', icon: Users, label: 'Feed' },
+  { path: '/dashboard/challenges', icon: Trophy, label: 'Challenges' },
   { path: '/dashboard/leaderboard', icon: Trophy, label: 'Leaderboard' },
   { path: '/dashboard/workouts', icon: Dumbbell, label: 'Workouts' },
+  { path: '/dashboard/nutrition', icon: UtensilsCrossed, label: 'Nutrition' },
   { path: '/dashboard/training-plan', icon: Calendar, label: 'Training Plan' },
   { path: '/dashboard/goals', icon: Target, label: 'Goals' },
   { path: '/dashboard/records', icon: Trophy, label: 'Records' },

@@ -190,6 +190,148 @@ export const BADGES = {
     icon: '🗓️',
     category: 'special',
     rarity: 'common'
+  },
+  
+  // Yoga badges
+  yoga_first: {
+    id: 'yoga_first',
+    name: 'First Flow',
+    description: 'Complete your first yoga session',
+    icon: '🧘',
+    category: 'yoga',
+    rarity: 'common'
+  },
+  yoga_10: {
+    id: 'yoga_10',
+    name: 'Yogi in Training',
+    description: 'Complete 10 yoga sessions',
+    icon: '🪷',
+    category: 'yoga',
+    rarity: 'rare'
+  },
+  yoga_50: {
+    id: 'yoga_50',
+    name: 'Mindful Master',
+    description: 'Complete 50 yoga sessions',
+    icon: '☯️',
+    category: 'yoga',
+    rarity: 'epic'
+  },
+  yoga_streak_7: {
+    id: 'yoga_streak_7',
+    name: 'Daily Zen',
+    description: 'Complete yoga sessions for 7 consecutive days',
+    icon: '🌅',
+    category: 'yoga',
+    rarity: 'rare'
+  },
+  yoga_meditation_100: {
+    id: 'yoga_meditation_100',
+    name: 'Meditation Master',
+    description: 'Accumulate 100 minutes of meditation',
+    icon: '🧠',
+    category: 'yoga',
+    rarity: 'epic'
+  },
+  yoga_flexibility: {
+    id: 'yoga_flexibility',
+    name: 'Flexibility Focus',
+    description: 'Improve your flexibility score 10 times',
+    icon: '🤸',
+    category: 'yoga',
+    rarity: 'rare'
+  },
+  
+  // Challenge badges
+  challenge_winner: {
+    id: 'challenge_winner',
+    name: 'Challenge Champion',
+    description: 'Win a challenge by finishing first',
+    icon: '🏆',
+    category: 'challenges',
+    rarity: 'epic'
+  },
+  challenge_top3: {
+    id: 'challenge_top3',
+    name: 'Podium Finish',
+    description: 'Finish in the top 3 of a challenge',
+    icon: '🥇',
+    category: 'challenges',
+    rarity: 'rare'
+  },
+  challenge_finisher: {
+    id: 'challenge_finisher',
+    name: 'Challenge Finisher',
+    description: 'Complete a challenge target',
+    icon: '✅',
+    category: 'challenges',
+    rarity: 'common'
+  },
+  challenge_creator: {
+    id: 'challenge_creator',
+    name: 'Challenge Maker',
+    description: 'Create 5 challenges',
+    icon: '🎯',
+    category: 'challenges',
+    rarity: 'rare'
+  },
+  challenge_streak: {
+    id: 'challenge_streak',
+    name: 'Challenge Warrior',
+    description: 'Complete 10 challenges',
+    icon: '🔥',
+    category: 'challenges',
+    rarity: 'epic'
+  },
+  
+  // Nutrition badges
+  nutrition_first: {
+    id: 'nutrition_first',
+    name: 'First Bite',
+    description: 'Log your first meal',
+    icon: '🍽️',
+    category: 'nutrition',
+    rarity: 'common'
+  },
+  nutrition_7day: {
+    id: 'nutrition_7day',
+    name: 'Consistent Tracker',
+    description: 'Track nutrition for 7 consecutive days',
+    icon: '📊',
+    category: 'nutrition',
+    rarity: 'rare'
+  },
+  nutrition_protein: {
+    id: 'nutrition_protein',
+    name: 'Protein Champion',
+    description: 'Hit protein target 10 days',
+    icon: '💪',
+    category: 'nutrition',
+    rarity: 'rare'
+  },
+  nutrition_balanced: {
+    id: 'nutrition_balanced',
+    name: 'Balanced Eater',
+    description: 'Stay within calorie goal for a week',
+    icon: '⚖️',
+    category: 'nutrition',
+    rarity: 'rare'
+  },
+  nutrition_30day: {
+    id: 'nutrition_30day',
+    name: 'Nutrition Master',
+    description: 'Track nutrition for 30 days',
+    icon: '🏆',
+    category: 'nutrition',
+    rarity: 'epic'
+  },
+  nutrition_hydration: {
+    id: 'nutrition_hydration',
+    name: 'Hydration Hero',
+    description: 'Meet water goal for 7 days',
+    icon: '💧',
+    category: 'nutrition',
+    rarity: 'common'
   }
 };
 
@@ -313,6 +455,55 @@ export const checkAndAwardBadges = async (userId, workout) => {
     if (completedGoals >= 10 && !earnedBadgeIds.has('goals_10')) {
       const badge = await awardBadge(userId, 'goals_10', workout._id);
       if (badge) newBadges.push(badge);
+    }
+    
+    // Yoga badges
+    if (workout.type === 'yoga') {
+      const yogaCount = await Workout.countDocuments({ 
+        user: userId, 
+        type: 'yoga' 
+      });
+      
+      // First yoga session
+      if (yogaCount === 1 && !earnedBadgeIds.has('yoga_first')) {
+        const badge = await awardBadge(userId, 'yoga_first', workout._id);
+        if (badge) newBadges.push(badge);
+      }
+      
+      // Yoga count badges
+      if (yogaCount >= 10 && !earnedBadgeIds.has('yoga_10')) {
+        const badge = await awardBadge(userId, 'yoga_10', workout._id);
+        if (badge) newBadges.push(badge);
+      }
+      if (yogaCount >= 50 && !earnedBadgeIds.has('yoga_50')) {
+        const badge = await awardBadge(userId, 'yoga_50', workout._id);
+        if (badge) newBadges.push(badge);
+      }
+      
+      // Yoga streak badge
+      const yogaStreak = await calculateYogaStreak(userId);
+      if (yogaStreak >= 7 && !earnedBadgeIds.has('yoga_streak_7')) {
+        const badge = await awardBadge(userId, 'yoga_streak_7', workout._id);
+        if (badge) newBadges.push(badge);
+      }
+      
+      // Meditation minutes badge
+      const totalMeditationMinutes = await calculateTotalMeditationMinutes(userId);
+      if (totalMeditationMinutes >= 100 && !earnedBadgeIds.has('yoga_meditation_100')) {
+        const badge = await awardBadge(userId, 'yoga_meditation_100', workout._id);
+        if (badge) newBadges.push(badge);
+      }
+      
+      // Flexibility improvement badge
+      if (workout.yoga?.flexibility?.preScore && workout.yoga?.flexibility?.postScore) {
+        if (workout.yoga.flexibility.postScore > workout.yoga.flexibility.preScore) {
+          const flexibilityImprovements = await countFlexibilityImprovements(userId);
+          if (flexibilityImprovements >= 10 && !earnedBadgeIds.has('yoga_flexibility')) {
+            const badge = await awardBadge(userId, 'yoga_flexibility', workout._id);
+            if (badge) newBadges.push(badge);
+          }
+        }
+      }
     }
     
     return newBadges;
@@ -445,7 +636,10 @@ export const getUserBadges = async (userId) => {
     distance: [],
     achievement: [],
     goals: [],
-    special: []
+    special: [],
+    yoga: [],
+    challenges: [],
+    nutrition: []
   };
   
   allBadges.forEach(badge => {
@@ -567,7 +761,7 @@ export const syncUserBadges = async (userId) => {
 };
 
 // Simple badge award without workout reference
-async function awardBadgeSimple(userId, badgeId) {
+export async function awardBadgeSimple(userId, badgeId) {
   try {
     const badge = BADGES[badgeId];
     if (!badge) return null;
@@ -588,4 +782,79 @@ async function awardBadgeSimple(userId, badgeId) {
     console.error('Error awarding badge:', error);
     return null;
   }
+}
+
+// Helper: Calculate yoga streak
+async function calculateYogaStreak(userId) {
+  const workouts = await Workout.find({
+    user: userId,
+    type: 'yoga'
+  })
+    .sort({ date: -1 })
+    .select('date')
+    .limit(365);
+  
+  if (workouts.length === 0) return 0;
+  
+  let streak = 0;
+  let currentDate = new Date();
+  currentDate.setHours(0, 0, 0, 0);
+  
+  const workoutDates = new Set(
+    workouts.map(w => {
+      const d = new Date(w.date);
+      d.setHours(0, 0, 0, 0);
+      return d.getTime();
+    })
+  );
+  
+  while (true) {
+    if (workoutDates.has(currentDate.getTime())) {
+      streak++;
+      currentDate.setDate(currentDate.getDate() - 1);
+    } else if (streak === 0) {
+      currentDate.setDate(currentDate.getDate() - 1);
+      if (!workoutDates.has(currentDate.getTime())) {
+        break;
+      }
+    } else {
+      break;
+    }
+  }
+  
+  return streak;
+}
+
+// Helper: Calculate total meditation minutes
+async function calculateTotalMeditationMinutes(userId) {
+  const result = await Workout.aggregate([
+    {
+      $match: {
+        user: toObjectId(userId),
+        type: 'yoga',
+        'yoga.meditation.duration': { $gt: 0 }
+      }
+    },
+    {
+      $group: {
+        _id: null,
+        totalMinutes: { $sum: '$yoga.meditation.duration' }
+      }
+    }
+  ]);
+  
+  return result[0]?.totalMinutes || 0;
+}
+
+// Helper: Count flexibility improvements
+async function countFlexibilityImprovements(userId) {
+  const result = await Workout.countDocuments({
+    user: userId,
+    type: 'yoga',
+    'yoga.flexibility.preScore': { $exists: true },
+    'yoga.flexibility.postScore': { $exists: true },
+    $expr: { $gt: ['$yoga.flexibility.postScore', '$yoga.flexibility.preScore'] }
+  });
+  
+  return result;
 }

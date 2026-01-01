@@ -19,6 +19,8 @@ import TrainingPlan from './pages/TrainingPlan';
 import Feed from './pages/Feed';
 import Profile from './pages/Profile';
 import Leaderboard from './pages/Leaderboard';
+import Challenges from './pages/Challenges';
+import Nutrition from './pages/Nutrition';
 
 // Layout
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -138,6 +140,21 @@ export default function App() {
       <Route path="/dashboard/leaderboard" element={
         <ProtectedRoute>
           <Leaderboard />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/challenges" element={
+        <ProtectedRoute>
+          <Challenges />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/challenges/:id" element={
+        <ProtectedRoute>
+          <Challenges />
+        </ProtectedRoute>
+      } />
+      <Route path="/dashboard/nutrition" element={
+        <ProtectedRoute>
+          <Nutrition />
         </ProtectedRoute>
       } />
       

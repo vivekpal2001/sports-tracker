@@ -14,7 +14,8 @@ import {
   Check,
   X,
   Plus,
-  Minus
+  Minus,
+  Flower2
 } from 'lucide-react';
 import { Button, Input, Card } from '../components/ui';
 import { workoutAPI } from '../services/api';
@@ -24,7 +25,53 @@ const WORKOUT_TYPES = [
   { id: 'run', name: 'Run', icon: Activity, color: 'lime' },
   { id: 'lift', name: 'Lift', icon: Dumbbell, color: 'orange' },
   { id: 'cardio', name: 'Cardio', icon: Bike, color: 'primary' },
+  { id: 'yoga', name: 'Yoga', icon: Flower2, color: 'purple' },
   { id: 'biometrics', name: 'Biometrics', icon: Heart, color: 'crimson' },
+];
+
+const YOGA_STYLES = [
+  { id: 'vinyasa', name: 'Vinyasa' },
+  { id: 'hatha', name: 'Hatha' },
+  { id: 'ashtanga', name: 'Ashtanga' },
+  { id: 'yin', name: 'Yin' },
+  { id: 'restorative', name: 'Restorative' },
+  { id: 'power', name: 'Power' },
+  { id: 'kundalini', name: 'Kundalini' },
+  { id: 'bikram', name: 'Bikram/Hot' },
+  { id: 'iyengar', name: 'Iyengar' },
+  { id: 'other', name: 'Other' }
+];
+
+const YOGA_SEQUENCES = [
+  { id: 'sun_salutation_a', name: 'Sun Salutation A' },
+  { id: 'sun_salutation_b', name: 'Sun Salutation B' },
+  { id: 'hip_opener_flow', name: 'Hip Opener Flow' },
+  { id: 'morning_energizer', name: 'Morning Energizer' },
+  { id: 'stress_relief', name: 'Stress Relief' },
+  { id: 'core_strength', name: 'Core Strength Flow' },
+  { id: 'backbend_flow', name: 'Backbend Flow' },
+  { id: 'balance_practice', name: 'Balance Practice' },
+  { id: 'restorative_evening', name: 'Restorative Evening' },
+  { id: 'power_yoga', name: 'Power Yoga Flow' },
+  { id: 'custom', name: 'Custom/Mixed' }
+];
+
+const MEDITATION_TYPES = [
+  { id: 'guided', name: 'Guided' },
+  { id: 'silent', name: 'Silent' },
+  { id: 'visualization', name: 'Visualization' },
+  { id: 'body-scan', name: 'Body Scan' },
+  { id: 'mindfulness', name: 'Mindfulness' }
+];
+
+const YOGA_PROPS = [
+  { id: 'mat', name: 'Yoga Mat', icon: '🧘' },
+  { id: 'block', name: 'Block', icon: '🧱' },
+  { id: 'strap', name: 'Strap', icon: '🎗️' },
+  { id: 'bolster', name: 'Bolster', icon: '🛏️' },
+  { id: 'blanket', name: 'Blanket', icon: '🧣' },
+  { id: 'wheel', name: 'Wheel', icon: '⭕' },
+  { id: 'cushion', name: 'Cushion', icon: '🛋️' }
 ];
 
 const RPE_LABELS = [
@@ -76,6 +123,21 @@ export default function LogWorkout() {
       stress: 5,
       hydration: '',
       soreness: 3
+    },
+    // Yoga fields
+    yoga: {
+      style: 'vinyasa',
+      sequence: '',
+      breathworkType: '',
+      breathworkDuration: '',
+      meditationType: '',
+      meditationDuration: '',
+      flexibilityPre: 5,
+      flexibilityPost: 5,
+      mindfulnessRating: 5,
+      props: [],
+      caloriesBurned: '',
+      roomTemperature: ''
     }
   });
   
@@ -202,6 +264,30 @@ export default function LogWorkout() {
         hydration: parseFloat(formData.biometrics.hydration) || undefined,
         soreness: formData.biometrics.soreness
       };
+    } else if (formData.type === 'yoga') {
+      workoutData.yoga = {
+        style: formData.yoga.style,
+        sequence: formData.yoga.sequence ? {
+          id: formData.yoga.sequence,
+          name: YOGA_SEQUENCES.find(s => s.id === formData.yoga.sequence)?.name
+        } : undefined,
+        breathwork: formData.yoga.breathworkDuration ? {
+          type: formData.yoga.breathworkType,
+          duration: parseInt(formData.yoga.breathworkDuration)
+        } : undefined,
+        meditation: formData.yoga.meditationDuration ? {
+          duration: parseInt(formData.yoga.meditationDuration),
+          meditationType: formData.yoga.meditationType
+        } : undefined,
+        flexibility: {
+          preScore: formData.yoga.flexibilityPre,
+          postScore: formData.yoga.flexibilityPost
+        },
+        mindfulnessRating: formData.yoga.mindfulnessRating,
+        props: formData.yoga.props,
+        caloriesBurned: parseInt(formData.yoga.caloriesBurned) || undefined,
+        roomTemperature: parseInt(formData.yoga.roomTemperature) || undefined
+      };
     }
     
     try {
@@ -281,12 +367,14 @@ export default function LogWorkout() {
                         ${type.color === 'orange' ? 'bg-orange-500/20' : ''}
                         ${type.color === 'primary' ? 'bg-primary-500/20' : ''}
                         ${type.color === 'crimson' ? 'bg-crimson-500/20' : ''}
+                        ${type.color === 'purple' ? 'bg-purple-500/20' : ''}
                       `}>
                         <Icon className={`w-7 h-7 ${
                           type.color === 'lime' ? 'text-lime-500' : ''
                         }${type.color === 'orange' ? 'text-orange-500' : ''}
                         ${type.color === 'primary' ? 'text-primary-500' : ''}
-                        ${type.color === 'crimson' ? 'text-crimson-500' : ''}`} />
+                        ${type.color === 'crimson' ? 'text-crimson-500' : ''}
+                        ${type.color === 'purple' ? 'text-purple-500' : ''}`} />
                       </div>
                       <span className={isSelected ? 'text-primary-500 font-medium' : 'text-gray-300'}>
                         {type.name}
@@ -612,6 +700,202 @@ export default function LogWorkout() {
                         value={formData.biometrics.hydration}
                         onChange={(e) => handleChange(e, 'biometrics')}
                       />
+                    </div>
+                  </>
+                )}
+                
+                {formData.type === 'yoga' && (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Yoga Style</label>
+                        <select
+                          name="style"
+                          value={formData.yoga.style}
+                          onChange={(e) => handleChange(e, 'yoga')}
+                          className="w-full px-4 py-3 rounded-xl bg-dark-200/50 border border-white/10 text-white"
+                        >
+                          {YOGA_STYLES.map(style => (
+                            <option key={style.id} value={style.id}>{style.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-300 mb-2">Sequence (Optional)</label>
+                        <select
+                          name="sequence"
+                          value={formData.yoga.sequence}
+                          onChange={(e) => handleChange(e, 'yoga')}
+                          className="w-full px-4 py-3 rounded-xl bg-dark-200/50 border border-white/10 text-white"
+                        >
+                          <option value="">None</option>
+                          {YOGA_SEQUENCES.map(seq => (
+                            <option key={seq.id} value={seq.id}>{seq.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    
+                    {/* Breathwork */}
+                    <div className="p-4 rounded-xl bg-dark-200/30 space-y-3">
+                      <label className="block text-sm font-medium text-gray-300">Breathwork (Pranayama)</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <input
+                          type="text"
+                          name="breathworkType"
+                          placeholder="Type (e.g., Ujjayi, Nadi Shodhana)"
+                          value={formData.yoga.breathworkType}
+                          onChange={(e) => handleChange(e, 'yoga')}
+                          className="px-4 py-3 rounded-xl bg-dark-200/50 border border-white/10 text-white placeholder:text-gray-500"
+                        />
+                        <Input
+                          type="number"
+                          name="breathworkDuration"
+                          placeholder="Duration (min)"
+                          value={formData.yoga.breathworkDuration}
+                          onChange={(e) => handleChange(e, 'yoga')}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Meditation */}
+                    <div className="p-4 rounded-xl bg-dark-200/30 space-y-3">
+                      <label className="block text-sm font-medium text-gray-300">Meditation</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <select
+                          name="meditationType"
+                          value={formData.yoga.meditationType}
+                          onChange={(e) => handleChange(e, 'yoga')}
+                          className="px-4 py-3 rounded-xl bg-dark-200/50 border border-white/10 text-white"
+                        >
+                          <option value="">Select type...</option>
+                          {MEDITATION_TYPES.map(type => (
+                            <option key={type.id} value={type.id}>{type.name}</option>
+                          ))}
+                        </select>
+                        <Input
+                          type="number"
+                          name="meditationDuration"
+                          placeholder="Duration (min)"
+                          value={formData.yoga.meditationDuration}
+                          onChange={(e) => handleChange(e, 'yoga')}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Flexibility */}
+                    <div className="space-y-3">
+                      <label className="block text-sm font-medium text-gray-300">Flexibility Score</label>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <p className="text-xs text-gray-500 mb-2">Before Session</p>
+                          <input
+                            type="range"
+                            min="1"
+                            max="10"
+                            value={formData.yoga.flexibilityPre}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              yoga: { ...prev.yoga, flexibilityPre: parseInt(e.target.value) }
+                            }))}
+                            className="w-full accent-purple-500"
+                          />
+                          <p className="text-center text-purple-400">{formData.yoga.flexibilityPre}/10</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-gray-500 mb-2">After Session</p>
+                          <input
+                            type="range"
+                            min="1"
+                            max="10"
+                            value={formData.yoga.flexibilityPost}
+                            onChange={(e) => setFormData(prev => ({
+                              ...prev,
+                              yoga: { ...prev.yoga, flexibilityPost: parseInt(e.target.value) }
+                            }))}
+                            className="w-full accent-purple-500"
+                          />
+                          <p className="text-center text-purple-400">{formData.yoga.flexibilityPost}/10</p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Mindfulness */}
+                    <div className="space-y-3">
+                      <label className="block text-sm font-medium text-gray-300">Mindfulness Rating</label>
+                      <input
+                        type="range"
+                        min="1"
+                        max="10"
+                        value={formData.yoga.mindfulnessRating}
+                        onChange={(e) => setFormData(prev => ({
+                          ...prev,
+                          yoga: { ...prev.yoga, mindfulnessRating: parseInt(e.target.value) }
+                        }))}
+                        className="w-full accent-purple-500"
+                      />
+                      <div className="flex justify-between text-sm">
+                        <span className="text-gray-500">Distracted</span>
+                        <span className="text-purple-400 font-medium">{formData.yoga.mindfulnessRating}/10</span>
+                        <span className="text-gray-500">Fully Present</span>
+                      </div>
+                    </div>
+                    
+                    {/* Props */}
+                    <div className="space-y-3">
+                      <label className="block text-sm font-medium text-gray-300">Props Used</label>
+                      <div className="flex flex-wrap gap-2">
+                        {YOGA_PROPS.map(prop => {
+                          const isSelected = formData.yoga.props.includes(prop.id);
+                          return (
+                            <button
+                              key={prop.id}
+                              type="button"
+                              onClick={() => {
+                                setFormData(prev => ({
+                                  ...prev,
+                                  yoga: {
+                                    ...prev.yoga,
+                                    props: isSelected 
+                                      ? prev.yoga.props.filter(p => p !== prop.id)
+                                      : [...prev.yoga.props, prop.id]
+                                  }
+                                }));
+                              }}
+                              className={`px-3 py-2 rounded-lg text-sm flex items-center gap-2 transition-all ${
+                                isSelected 
+                                  ? 'bg-purple-500/20 border border-purple-500 text-purple-400' 
+                                  : 'bg-dark-200/50 border border-white/10 text-gray-400 hover:border-white/20'
+                              }`}
+                            >
+                              <span>{prop.icon}</span>
+                              <span>{prop.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                    
+                    {/* Additional fields */}
+                    <div className="grid grid-cols-2 gap-4">
+                      <Input
+                        label="Calories Burned"
+                        type="number"
+                        name="caloriesBurned"
+                        placeholder="200"
+                        value={formData.yoga.caloriesBurned}
+                        onChange={(e) => handleChange(e, 'yoga')}
+                      />
+                      {formData.yoga.style === 'bikram' && (
+                        <Input
+                          label="Room Temp (°C)"
+                          type="number"
+                          name="roomTemperature"
+                          placeholder="38"
+                          value={formData.yoga.roomTemperature}
+                          onChange={(e) => handleChange(e, 'yoga')}
+                        />
+                      )}
                     </div>
                   </>
                 )}

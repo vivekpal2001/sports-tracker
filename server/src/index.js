@@ -20,6 +20,8 @@ import feedRoutes from './routes/feed.js';
 import leaderboardRoutes from './routes/leaderboard.js';
 import notificationRoutes from './routes/notifications.js';
 import uploadRoutes from './routes/upload.js';
+import challengeRoutes from './routes/challenges.js';
+import nutritionRoutes from './routes/nutrition.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -60,6 +62,8 @@ app.use('/api/feed', feedRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/challenges', challengeRoutes);
+app.use('/api/nutrition', nutritionRoutes);
 
 // Error handler
 app.use(errorHandler);
